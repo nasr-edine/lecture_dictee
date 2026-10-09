@@ -213,6 +213,12 @@ input[type=range] { width: 180px; vertical-align: middle; }
     🎚️ Vitesse :
     <input type="range" min="1" max="30" value="10" step="1" id="speedSlider">
     <span id="speedValue">1.0×</span>
+    <br><br>
+    <label style="font-size:18px; cursor:pointer;">
+        <input type="checkbox" id="rec-check" checked style="width:20px; height:20px; vertical-align:middle;">
+        🎙️ Enregistrer ma lecture (quand le son est coupé)
+    </label>
+    <div id="rec-statut" style="margin-top:8px; font-size:18px; min-height:24px;"></div>
 </div>
 
 <div id="progression-bar" style="display:none">
@@ -222,6 +228,11 @@ input[type=range] { width: 180px; vertical-align: middle; }
 </div>
 
 <p id="text"></p>
+
+<div id="lectures-zone" style="margin:20px 0; padding:15px; background:white; border-radius:10px; border:2px solid #d070a0;">
+    <div style="font-size:18px; color:#7a2a55; font-weight:bold; margin-bottom:10px;">🎙️ Mes lectures enregistrées</div>
+    <div id="lectures-liste"></div>
+</div>
 
 <div id="dictee-zone">
     <label id="dictee-label">✏️ Écris ce que tu entends :</label>
@@ -415,6 +426,7 @@ function highlightWord() {
     spans.forEach(s => s.classList.remove("highlight"));
     if (currentIndex < spans.length) {
         spans[currentIndex].classList.add("highlight");
+        noterTopMot(currentIndex);
         currentIndex++;
     }
 }
@@ -522,7 +534,7 @@ function lireMotParMot(listeMots, fromIndex, onFinTout) {
 // ── Lecture mode muet (timer pur) ────────────────────────────
 function scheduleNext() {
     if (!isReading || isPaused) return;
-    if (currentIndex >= words.length) { stopReading(); return; }
+    if (currentIndex >= words.length) { finLectureNaturelle(); return; }
     highlightWord();
     var { delayMs } = sliderToParams(getSliderVal());
     readingTimer = setTimeout(function() { scheduleNext(); }, delayMs);
@@ -542,14 +554,106 @@ function lancerLecture(onFinTout) {
 // ── Lecture normale ──────────────────────────────────────────
 function startReading() {
     stopReading();
+    arreterEcoute();
     prepareText();
     currentIndex = 0;
     isPaused = false;
-    isReading = true;
-    const pb = getPauseBtn();
-    pb.style.display = "inline-block";
-    pb.textContent = "⏸ Pause";
-    lancerLecture(null);
+
+    const demarrer = function() {
+        isReading = true;
+        const pb = getPauseBtn();
+        pb.style.display = "inline-block";
+        pb.textContent = "⏸ Pause";
+        lancerLecture(null);
+    };
+
+    var veutEnregistrer = isMuted && !isDictee && document.getElementById("rec-check").checked;
+    if (!veutEnregistrer) { demarrer(); return; }
+
+    var tk = ++lectureToken;
+    var avecMicro = true;
+    demarrerEnregistrement(tk).catch(function(err) {
+        avecMicro = false;
+        console.warn("Enregistrement impossible :", err);
+        if (tk === lectureToken) majStatutRec("⚠️ Micro indisponible ou refusé : la lecture ne sera pas enregistrée.", "#b26a00");
+    }).then(function() {
+        if (tk !== lectureToken) {
+            // Stop pressé pendant la demande d'autorisation du micro
+            if (enreg && enreg.token === tk) terminerEnregistrement(false);
+            return;
+        }
+        return compteARebours(tk, avecMicro).then(function(ok) {
+            if (!ok || tk !== lectureToken) return;
+            if (avecMicro) lancerEnregistrement();
+            demarrer();
+        });
+    });
+}
+
+// ── Compte à rebours 3-2-1-Go (visuel uniquement, pour ne pas être enregistré) ──
+let cdTimer = null;
+function masquerCompteARebours() {
+    if (cdTimer) { clearTimeout(cdTimer); cdTimer = null; }
+    var el = document.getElementById("compte-rebours");
+    if (el) el.remove();
+}
+function parlerCompteARebours(texte, onFin) {
+    var fini = false;
+    function fin() { if (!fini) { fini = true; if (onFin) onFin(); } }
+    try {
+        speechSynthesis.cancel();
+        var u = new SpeechSynthesisUtterance(texte);
+        u.lang = currentLang === "en" ? "en-US" : "fr-FR";
+        u.rate = 1;
+        u.volume = 1;
+        if (onFin) {
+            u.onend = fin;
+            u.onerror = fin;
+            setTimeout(fin, 1000); // sécurité si la voix ne répond pas
+        }
+        speechSynthesis.speak(u);
+    } catch (e) { fin(); }
+}
+
+function compteARebours(tk, avecMicro) {
+    return new Promise(function(resolve) {
+        masquerCompteARebours();
+        var el = document.createElement("div");
+        el.id = "compte-rebours";
+        el.style.cssText = "position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.88); font-family:inherit; font-weight:bold; color:#1a3d6e; font-size:min(40vw,220px); pointer-events:none;";
+        document.body.appendChild(el);
+        var en = currentLang === "en";
+        var etapes = [
+            { txt: "3", voix: en ? "Three" : "Trois" },
+            { txt: "2", voix: en ? "Two" : "Deux" },
+            { txt: "1", voix: en ? "One" : "Un" },
+            { txt: "Go !", voix: en ? "Go!" : "Go !" }
+        ];
+        var i = 0;
+        function suivant() {
+            if (tk !== lectureToken) { masquerCompteARebours(); resolve(false); return; }
+            var e = etapes[i];
+            el.textContent = e.txt;
+            if (i === etapes.length - 1) {
+                // "Go !" : on attend la fin de la voix avant de lancer micro + lecture,
+                // pour que le "Go" ne soit pas dans l'enregistrement
+                el.style.color = "#2e7d32";
+                el.style.fontSize = "min(30vw,160px)";
+                parlerCompteARebours(e.voix, function() {
+                    if (tk !== lectureToken) { masquerCompteARebours(); resolve(false); return; }
+                    if (cdTimer) clearTimeout(cdTimer);
+                    cdTimer = setTimeout(masquerCompteARebours, 400);
+                    resolve(true);
+                });
+                return;
+            }
+            parlerCompteARebours(e.voix);
+            i++;
+            cdTimer = setTimeout(suivant, 1000);
+        }
+        if (avecMicro) majStatutRec("🎙️ Prépare-toi… la lecture démarre dans 3 secondes.", "#1a3d6e");
+        suivant();
+    });
 }
 
 function lirePhraseActuelle() {
@@ -570,11 +674,13 @@ function togglePause() {
         isPaused = true;
         pauseIndexSave = currentIndex;
         pb.textContent = "▶️ Reprendre";
+        pauserEnregistrement();
         speechSynthesis.cancel();
         if (readingTimer) { clearTimeout(readingTimer); readingTimer = null; }
     } else {
         isPaused = false;
         pb.textContent = "⏸ Pause";
+        reprendreEnregistrement();
         currentIndex = pauseIndexSave;
         if (isMuted) {
             scheduleNext();
@@ -585,6 +691,9 @@ function togglePause() {
 }
 
 function stopReading() {
+    lectureToken++;
+    masquerCompteARebours();
+    if (enreg) { terminerEnregistrement(false); majStatutRec("⏹ Enregistrement annulé.", "#666"); }
     speechSynthesis.cancel();
     if (readingTimer) { clearTimeout(readingTimer); readingTimer = null; }
     currentIndex = 0;
@@ -609,6 +718,7 @@ function toggleMute() {
     } else {
         btn.textContent = UI[currentLang].sonActif;
         btn.classList.remove("muted-on");
+        if (enreg) { terminerEnregistrement(false); majStatutRec("⏹ Son réactivé : enregistrement annulé.", "#666"); }
         if (isReading && !isPaused) {
             if (readingTimer) { clearTimeout(readingTimer); readingTimer = null; }
             lireTexteComplet(words.slice(currentIndex), null);
@@ -1097,6 +1207,318 @@ document.getElementById("speedSlider").addEventListener("input", function() {
 });
 
 // ── Initialisation ───────────────────────────────────────────
+// ── Enregistreur de lecture ──────────────────────────────────
+let enreg = null;        // enregistrement en cours
+let lectureToken = 0;    // sert à annuler un démarrage asynchrone
+let ecoute = null;       // réécoute en cours
+const DB_NAME = "lecturedictee_audio";
+const DB_STORE = "lectures";
+
+function majStatutRec(msg, couleur) {
+    var el = document.getElementById("rec-statut");
+    el.textContent = msg;
+    el.style.color = couleur || "#333";
+}
+
+// IndexedDB (stockage local des fichiers audio sur le téléphone)
+function ouvrirDB() {
+    return new Promise(function(res, rej) {
+        var r = indexedDB.open(DB_NAME, 1);
+        r.onupgradeneeded = function() { r.result.createObjectStore(DB_STORE, { keyPath: "id" }); };
+        r.onsuccess = function() { res(r.result); };
+        r.onerror = function() { rej(r.error); };
+    });
+}
+async function dbTous() {
+    var db = await ouvrirDB();
+    return new Promise(function(res, rej) {
+        var q = db.transaction(DB_STORE).objectStore(DB_STORE).getAll();
+        q.onsuccess = function() { res(q.result); };
+        q.onerror = function() { rej(q.error); };
+    });
+}
+async function dbLire(id) {
+    var db = await ouvrirDB();
+    return new Promise(function(res, rej) {
+        var q = db.transaction(DB_STORE).objectStore(DB_STORE).get(id);
+        q.onsuccess = function() { res(q.result); };
+        q.onerror = function() { rej(q.error); };
+    });
+}
+async function dbEcrire(obj) {
+    var db = await ouvrirDB();
+    return new Promise(function(res, rej) {
+        var tx = db.transaction(DB_STORE, "readwrite");
+        tx.objectStore(DB_STORE).put(obj);
+        tx.oncomplete = function() { res(); };
+        tx.onerror = function() { rej(tx.error); };
+    });
+}
+async function dbSupprimer(id) {
+    var db = await ouvrirDB();
+    return new Promise(function(res, rej) {
+        var tx = db.transaction(DB_STORE, "readwrite");
+        tx.objectStore(DB_STORE).delete(id);
+        tx.oncomplete = function() { res(); };
+        tx.onerror = function() { rej(tx.error); };
+    });
+}
+
+function choisirMime() {
+    var cands = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
+    for (var i = 0; i < cands.length; i++) {
+        if (MediaRecorder.isTypeSupported(cands[i])) return cands[i];
+    }
+    return "";
+}
+
+async function demarrerEnregistrement(tk) {
+    if (!navigator.mediaDevices || !window.MediaRecorder) throw new Error("MediaRecorder non supporté");
+    var stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    var mime = choisirMime();
+    var mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    var e = {
+        mr: mr, stream: stream, chunks: [], times: [],
+        t0: 0, pausedTotal: 0, pausedAt: 0, wake: null,
+        mime: mr.mimeType || mime || "audio/webm",
+        jour: JOURS[slotActif], vitesse: getSliderVal() / 10,
+        texte: words.join(" "),
+        token: tk
+    };
+    mr.ondataavailable = function(ev) { if (ev.data && ev.data.size) e.chunks.push(ev.data); };
+    try { if (navigator.wakeLock) e.wake = await navigator.wakeLock.request("screen"); } catch (_) {}
+    enreg = e; // micro prêt ; l'enregistrement démarre vraiment au "Go !"
+}
+
+function lancerEnregistrement() {
+    if (!enreg || enreg.mr.state !== "inactive") return;
+    enreg.mr.start();
+    enreg.t0 = performance.now();
+    majStatutRec("🔴 Enregistrement en cours… lis en suivant le surlignage jaune.", "#c62828");
+}
+
+function tempsEnreg(e) {
+    var maintenant = performance.now();
+    return maintenant - e.t0 - e.pausedTotal - (e.pausedAt ? maintenant - e.pausedAt : 0);
+}
+
+function noterTopMot(index) {
+    if (enreg && !enreg.pausedAt) enreg.times[index] = tempsEnreg(enreg);
+}
+
+function pauserEnregistrement() {
+    if (!enreg || enreg.pausedAt) return;
+    enreg.pausedAt = performance.now();
+    try { enreg.mr.pause(); } catch (_) {}
+    majStatutRec("⏸ Enregistrement en pause.", "#b26a00");
+}
+
+function reprendreEnregistrement() {
+    if (!enreg || !enreg.pausedAt) return;
+    enreg.pausedTotal += performance.now() - enreg.pausedAt;
+    enreg.pausedAt = 0;
+    try { enreg.mr.resume(); } catch (_) {}
+    majStatutRec("🔴 Enregistrement en cours…", "#c62828");
+}
+
+function finLectureNaturelle() {
+    terminerEnregistrement(true);
+    stopReading();
+}
+
+function terminerEnregistrement(sauver) {
+    var e = enreg;
+    if (!e) return;
+    enreg = null;
+    var duree = Math.max(0, tempsEnreg(e)) / 1000;
+    e.mr.onstop = async function() {
+        e.stream.getTracks().forEach(function(t) { t.stop(); });
+        if (e.wake) { try { e.wake.release(); } catch (_) {} }
+        if (!sauver) return;
+        try {
+            majStatutRec("⏳ Sauvegarde de la lecture…", "#555");
+            var blob = new Blob(e.chunks, { type: e.mime });
+            var partage = null;
+            try { partage = await versWav(blob); } catch (err) { console.warn("Conversion WAV impossible", err); }
+            await dbEcrire({
+                id: Date.now(), date: new Date().toISOString(),
+                jour: e.jour, vitesse: e.vitesse, texte: e.texte,
+                times: e.times, mime: e.mime, duree: duree,
+                blob: blob, partage: partage
+            });
+            majStatutRec("✅ Lecture enregistrée (" + e.jour + ", vitesse " + e.vitesse.toFixed(1) + "×). Tu peux la réécouter ci-dessous.", "#2e7d32");
+            afficherLectures();
+        } catch (err) {
+            console.error(err);
+            majStatutRec("⚠️ Impossible de sauvegarder l'enregistrement.", "#c62828");
+        }
+    };
+    if (e.mr.state !== "inactive") e.mr.stop(); else e.mr.onstop();
+}
+
+// Conversion en WAV mono 16 kHz (lisible partout, y compris WhatsApp)
+function encoderWav(samples, sr) {
+    var buffer = new ArrayBuffer(44 + samples.length * 2);
+    var v = new DataView(buffer);
+    function ecrire(off, str) { for (var i = 0; i < str.length; i++) v.setUint8(off + i, str.charCodeAt(i)); }
+    ecrire(0, "RIFF"); v.setUint32(4, 36 + samples.length * 2, true);
+    ecrire(8, "WAVE"); ecrire(12, "fmt "); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    ecrire(36, "data"); v.setUint32(40, samples.length * 2, true);
+    for (var i = 0; i < samples.length; i++) {
+        var x = Math.max(-1, Math.min(1, samples[i]));
+        v.setInt16(44 + i * 2, x < 0 ? x * 0x8000 : x * 0x7FFF, true);
+    }
+    return new Blob([buffer], { type: "audio/wav" });
+}
+
+async function versWav(blob) {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    var ctx = new AC();
+    var audio = await ctx.decodeAudioData(await blob.arrayBuffer());
+    ctx.close();
+    var sr = 16000;
+    var off = new OfflineAudioContext(1, Math.ceil(audio.duration * sr), sr);
+    var src = off.createBufferSource();
+    src.buffer = audio;
+    src.connect(off.destination);
+    src.start();
+    var rendu = await off.startRendering();
+    return encoderWav(rendu.getChannelData(0), sr);
+}
+
+// Réécoute avec surlignage synchronisé
+function arreterEcoute() {
+    if (!ecoute) return;
+    cancelAnimationFrame(ecoute.raf);
+    ecoute.audio.pause();
+    URL.revokeObjectURL(ecoute.url);
+    ecoute = null;
+    document.querySelectorAll(".word").forEach(function(s) { s.classList.remove("highlight"); });
+    afficherLectures();
+}
+
+async function ecouterLecture(id) {
+    if (ecoute && ecoute.id === id) { arreterEcoute(); return; }
+    arreterEcoute();
+    stopReading();
+    var r = await dbLire(id);
+    if (!r) return;
+    prepareText(r.texte);
+    var spans = document.querySelectorAll(".word");
+    var url = URL.createObjectURL(r.blob);
+    var audio = new Audio(url);
+    var e = { id: id, audio: audio, url: url, raf: 0, i: -1 };
+    ecoute = e;
+    function tick() {
+        if (ecoute !== e) return;
+        var t = audio.currentTime * 1000;
+        var k = e.i;
+        while (k + 1 < r.times.length && r.times[k + 1] !== undefined && r.times[k + 1] <= t) k++;
+        if (k !== e.i) {
+            spans.forEach(function(s) { s.classList.remove("highlight"); });
+            if (k >= 0 && spans[k]) spans[k].classList.add("highlight");
+            e.i = k;
+        }
+        e.raf = requestAnimationFrame(tick);
+    }
+    audio.onended = function() { if (ecoute === e) arreterEcoute(); };
+    try {
+        await audio.play();
+    } catch (err) {
+        arreterEcoute();
+        alert("Impossible de lire cet enregistrement.");
+        return;
+    }
+    afficherLectures();
+    tick();
+}
+
+// Partage (WhatsApp, etc.) via le menu de partage du téléphone
+function telechargerFichier(file) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(file);
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+async function partagerLecture(id) {
+    var r = await dbLire(id);
+    if (!r) return;
+    var blob = r.partage || r.blob;
+    var ext = blob.type.indexOf("wav") >= 0 ? "wav" : blob.type.indexOf("mp4") >= 0 ? "m4a" : blob.type.indexOf("ogg") >= 0 ? "ogg" : "webm";
+    var d = new Date(r.date);
+    var horo = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") + "_" + String(d.getHours()).padStart(2, "0") + "h" + String(d.getMinutes()).padStart(2, "0");
+    var nom = "lecture_" + r.jour.toLowerCase() + "_vitesse-" + r.vitesse.toFixed(1) + "_" + horo + "." + ext;
+    var file = new File([blob], nom, { type: blob.type });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+            await navigator.share({ files: [file], title: "Ma lecture – " + r.jour });
+        } catch (err) {
+            if (err.name !== "AbortError") telechargerFichier(file);
+        }
+    } else {
+        telechargerFichier(file);
+    }
+}
+
+async function supprimerLecture(id) {
+    if (!confirm("Supprimer cet enregistrement ?")) return;
+    if (ecoute && ecoute.id === id) arreterEcoute();
+    await dbSupprimer(id);
+    afficherLectures();
+}
+
+function formatDuree(sec) {
+    var m = Math.floor(sec / 60), s = Math.round(sec % 60);
+    return m + ":" + String(s).padStart(2, "0");
+}
+
+async function afficherLectures() {
+    var zone = document.getElementById("lectures-liste");
+    var liste = [];
+    try { liste = await dbTous(); } catch (_) {
+        zone.textContent = "Enregistrements indisponibles sur ce navigateur.";
+        return;
+    }
+    liste.sort(function(a, b) { return b.id - a.id; });
+    zone.innerHTML = "";
+    if (!liste.length) {
+        zone.innerHTML = '<span style="color:#666; font-size:16px;">Aucun enregistrement pour l\'instant. Coupe le son, appuie sur « Lire » et lis à voix haute.</span>';
+        return;
+    }
+    liste.forEach(function(r) {
+        var ligne = document.createElement("div");
+        ligne.style.cssText = "display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #eee;";
+        var info = document.createElement("div");
+        info.style.cssText = "flex:1 1 180px; font-size:17px;";
+        var d = new Date(r.date).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+        info.innerHTML = "<strong></strong><br><span style='color:#666; font-size:15px;'></span>";
+        info.querySelector("strong").textContent = r.jour + " · vitesse " + r.vitesse.toFixed(1) + "×";
+        info.querySelector("span").textContent = d + " · " + formatDuree(r.duree);
+        var enCours = ecoute && ecoute.id === r.id;
+        var b1 = document.createElement("button");
+        b1.textContent = enCours ? "⏹ Arrêter" : "▶️ Réécouter";
+        b1.style.cssText = "background:#d6e8ff; border-color:#5599dd;";
+        b1.onclick = function() { ecouterLecture(r.id); };
+        var b2 = document.createElement("button");
+        b2.textContent = "📤 Partager";
+        b2.style.cssText = "background:#d6f0d6; border-color:#4caf50;";
+        b2.onclick = function() { partagerLecture(r.id); };
+        var b3 = document.createElement("button");
+        b3.textContent = "🗑️";
+        b3.title = "Supprimer";
+        b3.style.cssText = "background:#ffd6d6; border-color:#e07070;";
+        b3.onclick = function() { supprimerLecture(r.id); };
+        ligne.appendChild(info); ligne.appendChild(b1); ligne.appendChild(b2); ligne.appendChild(b3);
+        zone.appendChild(ligne);
+    });
+}
+
 // ── Textes distants (fichier textes.txt hébergé à côté de index.html) ──
 const CLE_DISTANT = "lecturedictee_distant";
 
@@ -1139,6 +1561,7 @@ async function synchroniserTextesDistants() {
 }
 
 window.addEventListener("DOMContentLoaded", async function() {
+    afficherLectures();
     afficherOnglets();
     await synchroniserTextesDistants();
     afficherOnglets();
