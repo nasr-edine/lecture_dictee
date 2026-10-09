@@ -1,0 +1,14 @@
+=== Lundi ===
+Écris ici le texte du lundi. Il peut faire plusieurs phrases.
+
+=== Mardi ===
+Écris ici le texte du mardi.
+
+=== Mercredi ===
+Écris ici le texte du mercredi.
+
+=== Jeudi ===
+Écris ici le texte du jeudi.
+
+=== Vendredi ===
+Écris ici le texte du vendredi.

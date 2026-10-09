@@ -1097,7 +1097,50 @@ document.getElementById("speedSlider").addEventListener("input", function() {
 });
 
 // ── Initialisation ───────────────────────────────────────────
-window.addEventListener("DOMContentLoaded", function() {
+// ── Textes distants (fichier textes.txt hébergé à côté de index.html) ──
+const CLE_DISTANT = "lecturedictee_distant";
+
+function parserTextes(brut) {
+    // Format : === Lundi === (puis le texte), === Mardi === ...
+    var res = {};
+    var parts = brut.split(/^===\s*([^=\n]+?)\s*===\s*$/m);
+    for (var i = 1; i < parts.length; i += 2) {
+        res[parts[i].trim().toLowerCase()] = (parts[i + 1] || "").trim();
+    }
+    return res;
+}
+
+async function synchroniserTextesDistants() {
+    try {
+        var rep = await fetch("textes.txt?t=" + Date.now(), { cache: "no-store" });
+        if (!rep.ok) return false;
+        var distants = parserTextes(await rep.text());
+        var dernierVu = JSON.parse(localStorage.getItem(CLE_DISTANT) || "{}");
+        var slots = chargerSlots();
+        var change = false;
+        JOURS.forEach(function(jour, i) {
+            var nouveau = distants[jour.toLowerCase()];
+            if (nouveau === undefined) return;
+            // On n'écrase que si le texte distant a changé depuis la dernière synchro
+            if (nouveau !== dernierVu[jour]) {
+                slots[i] = nouveau;
+                dernierVu[jour] = nouveau;
+                change = true;
+            }
+        });
+        if (change) {
+            sauvegarderSlots(slots);
+            localStorage.setItem(CLE_DISTANT, JSON.stringify(dernierVu));
+        }
+        return change;
+    } catch (e) {
+        return false; // hors ligne ou fichier absent : on garde ce qui est en mémoire
+    }
+}
+
+window.addEventListener("DOMContentLoaded", async function() {
+    afficherOnglets();
+    await synchroniserTextesDistants();
     afficherOnglets();
     var texteInitial = document.getElementById("source-input").value.trim();
     if (texteInitial) prepareText(texteInitial);
