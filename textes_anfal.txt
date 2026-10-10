@@ -1,0 +1,20 @@
+=== Lundi ===
+Texte du lundi pour Anfal.
+
+=== Mardi ===
+Texte du mardi pour Anfal.
+
+=== Mercredi ===
+Texte du mercredi pour Anfal.
+
+=== Jeudi ===
+Texte du jeudi pour Anfal.
+
+=== Vendredi ===
+Texte du vendredi pour Anfal.
+
+=== Samedi ===
+Texte du samedi pour Anfal.
+
+=== Dimanche ===
+Texte du dimanche pour Anfal.

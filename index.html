@@ -176,8 +176,17 @@ input[type=range] { width: 180px; vertical-align: middle; }
 </style>
 </head>
 <body>
+<div id="profil-ecran" style="display:none; position:fixed; inset:0; z-index:10000; background:#f4f8ff; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:20px; box-sizing:border-box;">
+    <div style="font-size:30px; font-weight:bold; color:#1a3d6e; margin-bottom:10px; text-align:center;">Qui lit aujourd'hui ?</div>
+    <div id="profil-boutons" style="display:flex; flex-direction:column; gap:14px; width:100%; max-width:320px;"></div>
+</div>
 <div class="container">
 <h2>Lecture &amp; Dictée</h2>
+
+<div id="profil-barre" style="display:none; align-items:center; gap:10px; margin-bottom:12px; font-size:20px;">
+    <span>👤 <strong id="profil-nom"></strong></span>
+    <button onclick="changerProfil()" style="font-size:15px; padding:5px 12px;">🔄 Changer</button>
+</div>
 
 <!-- Bibliothèque de textes (5 slots) -->
 <div id="source-zone">
@@ -274,14 +283,14 @@ let indicesEnCours = [];
 let numeroPasse = 1;
 
 const textElement = document.getElementById("text");
-const CLE_SAVE = "dictee_sauvegarde";
+let CLE_SAVE = "dictee_sauvegarde";
 let currentLang = 'fr';
 // null = pas encore testé, true = supporté (desktop), false = non supporté (Android)
 let onBoundarySupported = null;
 
 // ── Bibliothèque de textes (5 slots Lun-Ven) ─────────────────
 const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
-const CLE_SLOTS = "lecturedictee_slots";
+let CLE_SLOTS = "lecturedictee_slots";
 let slotActif = (new Date().getDay() + 6) % 7; // ouvre sur le jour d'aujourd'hui (lundi = 0)
 
 function chargerSlots() {
@@ -1285,6 +1294,7 @@ async function demarrerEnregistrement(tk) {
         mime: mr.mimeType || mime || "audio/webm",
         jour: JOURS[slotActif], vitesse: getSliderVal() / 10,
         texte: words.join(" "),
+        profil: profilActif ? profilActif.id : null,
         token: tk
     };
     mr.ondataavailable = function(ev) { if (ev.data && ev.data.size) e.chunks.push(ev.data); };
@@ -1344,7 +1354,7 @@ function terminerEnregistrement(sauver) {
             try { partage = await versWav(blob); } catch (err) { console.warn("Conversion WAV impossible", err); }
             await dbEcrire({
                 id: Date.now(), date: new Date().toISOString(),
-                jour: e.jour, vitesse: e.vitesse, texte: e.texte,
+                jour: e.jour, vitesse: e.vitesse, texte: e.texte, profil: e.profil,
                 times: e.times, mime: e.mime, duree: duree,
                 blob: blob, partage: partage
             });
@@ -1487,6 +1497,8 @@ async function afficherLectures() {
         zone.textContent = "Enregistrements indisponibles sur ce navigateur.";
         return;
     }
+    var pid = profilActif ? profilActif.id : null;
+    liste = liste.filter(function(r) { return !r.profil || r.profil === pid; });
     liste.sort(function(a, b) { return b.id - a.id; });
     zone.innerHTML = "";
     if (!liste.length) {
@@ -1522,7 +1534,7 @@ async function afficherLectures() {
 }
 
 // ── Textes distants (fichier textes.txt hébergé à côté de index.html) ──
-const CLE_DISTANT = "lecturedictee_distant";
+let CLE_DISTANT = "lecturedictee_distant";
 
 function parserTextes(brut) {
     // Format : === Lundi === (puis le texte), === Mardi === ...
@@ -1536,7 +1548,7 @@ function parserTextes(brut) {
 
 async function synchroniserTextesDistants() {
     try {
-        var rep = await fetch("textes.txt?t=" + Date.now(), { cache: "no-store" });
+        var rep = await fetch("textes_" + profilActif.id + ".txt?t=" + Date.now(), { cache: "no-store" });
         if (!rep.ok) return false;
         var distants = parserTextes(await rep.text());
         var dernierVu = JSON.parse(localStorage.getItem(CLE_DISTANT) || "{}");
@@ -1562,7 +1574,52 @@ async function synchroniserTextesDistants() {
     }
 }
 
-window.addEventListener("DOMContentLoaded", async function() {
+// ── Profils (une personne = un fichier textes_xxx.txt) ───────
+// Pour ajouter quelqu'un : ajouter une ligne ici + créer le fichier textes_<id>.txt
+const PROFILS = [
+    { id: "aya",   nom: "Aya",   couleur: "#ffd6e8" },
+    { id: "anfal", nom: "Anfal", couleur: "#d6e8ff" },
+    { id: "eva",   nom: "Eva",   couleur: "#d6f0d6" }
+];
+const CLE_PROFIL = "lecturedictee_profil";
+let profilActif = null;
+
+function afficherChoixProfil() {
+    var zone = document.getElementById("profil-boutons");
+    zone.innerHTML = "";
+    PROFILS.forEach(function(pr) {
+        var b = document.createElement("button");
+        b.textContent = pr.nom;
+        b.style.cssText = "font-size:32px; padding:22px; border-radius:14px; border:3px solid #7aa7d8; cursor:pointer; background:" + pr.couleur + ";";
+        b.onclick = function() { choisirProfil(pr.id); };
+        zone.appendChild(b);
+    });
+    document.getElementById("profil-ecran").style.display = "flex";
+}
+
+function changerProfil() {
+    stopReading();
+    arreterEcoute();
+    afficherChoixProfil();
+}
+
+async function choisirProfil(id) {
+    var pr = PROFILS.filter(function(x) { return x.id === id; })[0];
+    if (!pr) return;
+    profilActif = pr;
+    localStorage.setItem(CLE_PROFIL, id);
+    // Chaque profil a sa propre mémoire sur le téléphone
+    CLE_SLOTS = "lecturedictee_slots_" + id;
+    CLE_DISTANT = "lecturedictee_distant_" + id;
+    CLE_SAVE = "dictee_sauvegarde_" + id;
+    document.getElementById("profil-ecran").style.display = "none";
+    document.getElementById("profil-barre").style.display = "flex";
+    document.getElementById("profil-nom").textContent = pr.nom;
+    // Remise à zéro de l'affichage
+    textElement.innerHTML = "";
+    words = [];
+    majStatutRec("");
+    slotActif = (new Date().getDay() + 6) % 7;
     afficherLectures();
     afficherOnglets();
     await synchroniserTextesDistants();
@@ -1570,6 +1627,12 @@ window.addEventListener("DOMContentLoaded", async function() {
     var texteInitial = document.getElementById("source-input").value.trim();
     if (texteInitial) prepareText(texteInitial);
     verifierSauvegarde();
+}
+
+window.addEventListener("DOMContentLoaded", function() {
+    var memo = localStorage.getItem(CLE_PROFIL);
+    if (memo && PROFILS.some(function(x) { return x.id === memo; })) choisirProfil(memo);
+    else afficherChoixProfil();
 });
 </script>
 </body>
