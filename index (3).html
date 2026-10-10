@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Lecture dyslexie avancée</title>
+<style>
+body {
+    background-color: #fff6c7;
+    font-family: "Atkinson Hyperlegible", Arial, sans-serif;
+    font-size: 28px;
+    line-height: 1.8;
+    margin: 40px;
+    color: #111;
+}
+.container { max-width: 800px; margin: auto; }
+.word { padding: 2px 4px; border-radius: 5px; }
+.highlight { background-color: yellow; }
+
+.dictee-mode .word {
+    color: transparent;
+    background-color: #aaa;
+    border-radius: 4px;
+    user-select: none;
+}
+.dictee-mode .word.highlight { background-color: #888; }
+
+.controls {
+    margin-bottom: 20px;
+    padding: 10px;
+    background: rgba(255,255,255,0.6);
+    border-radius: 10px;
+}
+button {
+    font-size: 18px;
+    padding: 10px 15px;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: white;
+}
+#muteBtn.muted-on { background: #ffd6d6; border-color: #e07070; color: #7a1f1f; }
+#dicteeBtn.dictee-on { background: #d6e8ff; border-color: #5599dd; color: #1a3d6e; }
+input[type=range] { width: 180px; vertical-align: middle; }
+
+#progression-bar {
+    display: none;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    background: #e8f4ff;
+    border-radius: 8px;
+    border: 1px solid #5599dd;
+    font-size: 18px;
+    color: #1a3d6e;
+    align-items: center;
+    gap: 12px;
+}
+#progression-bar .prog-label { font-weight: bold; white-space: nowrap; }
+#prog-dots { display: flex; gap: 6px; flex-wrap: wrap; }
+.prog-dot {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #ccc;
+    border: 2px solid #aaa;
+    transition: background 0.3s;
+}
+.prog-dot.done { background: #4caf50; border-color: #2e7d32; }
+.prog-dot.current { background: #5599dd; border-color: #1a3d6e; }
+
+/* Bandeau de reprise de sauvegarde */
+#bandeau-reprise {
+    display: none;
+    margin-bottom: 14px;
+    padding: 12px 16px;
+    background: #fff3cd;
+    border: 2px solid #e0b030;
+    border-radius: 10px;
+    font-size: 18px;
+    color: #7a5500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+#bandeau-reprise button {
+    font-size: 16px;
+    padding: 6px 14px;
+    margin: 0;
+}
+
+#dictee-zone {
+    display: none;
+    margin-top: 16px;
+    padding: 15px;
+    background: white;
+    border-radius: 10px;
+    border: 2px dashed #5599dd;
+}
+#dictee-zone label { font-size: 18px; color: #333; display: block; margin-bottom: 8px; }
+#dictee-zone textarea {
+    width: 100%;
+    height: 120px;
+    font-size: 22px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+    font-family: "Atkinson Hyperlegible", Arial, sans-serif;
+    transition: background 0.2s;
+}
+#dictee-zone textarea[readonly] {
+    background: #f5f5f5;
+    color: #444;
+    cursor: not-allowed;
+}
+.dictee-btns { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+
+#correction-phrase {
+    display: none;
+    margin-top: 14px;
+    padding: 14px;
+    background: #f0fff0;
+    border-radius: 10px;
+    border: 2px solid #4caf50;
+    font-size: 20px;
+}
+#correction-phrase h3 { margin-top: 0; color: #2e7d32; font-size: 20px; }
+.mot-juste { color: #2e7d32; font-weight: bold; }
+.mot-faux  { color: #c62828; font-weight: bold; text-decoration: underline; }
+
+#bilan-final {
+    display: none;
+    margin-top: 20px;
+    padding: 18px;
+    background: #fffbe6;
+    border-radius: 10px;
+    border: 2px solid #f0c040;
+    font-size: 20px;
+}
+#bilan-final h3 { color: #7a5500; margin-top: 0; }
+
+#source-zone {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 10px;
+    border: 2px solid #5599dd;
+}
+#source-zone label {
+    font-size: 18px;
+    color: #1a3d6e;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 8px;
+}
+#source-input {
+    width: 100%;
+    height: 130px;
+    font-size: 20px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+    font-family: "Atkinson Hyperlegible", Arial, sans-serif;
+    line-height: 1.5;
+}
+#source-zone .source-btns {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+#source-statut { font-size: 15px; color: #2e7d32; margin-left: 4px; }
+</style>
+</head>
+<body>
+<div class="container">
+<h2>Lecture &amp; Dictée</h2>
+
+<!-- Bibliothèque de textes (5 slots) -->
+<div id="source-zone">
+    <label style="font-size:18px; color:#1a3d6e; font-weight:bold; display:block; margin-bottom:8px;">
+        📚 Textes de la semaine
+    </label>
+    <div id="slot-tabs" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;"></div>
+    <textarea id="source-input" rows="5" style="width:100%; font-size:20px; padding:10px; border-radius:8px; border:1px solid #ccc; box-sizing:border-box; font-family:inherit; line-height:1.5;"></textarea>
+    <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+        <button onclick="sauvegarderSlot()" style="background:#d6f0d6; border-color:#4caf50;">💾 Sauvegarder</button>
+        <button onclick="chargerNouveauTexte()" style="background:#d6e8ff; border-color:#5599dd;">📥 Charger pour lire</button>
+        <button onclick="viderSlot()" style="background:#ffd6d6; border-color:#e07070;">🗑️ Vider ce slot</button>
+        <span id="source-statut" style="font-size:15px; color:#2e7d32;"></span>
+    </div>
+</div>
+
+<!-- Bandeau de reprise automatique -->
+<div id="bandeau-reprise" style="display:none">
+    <span id="bandeau-texte">📌 Dictée en cours sauvegardée — tu t'étais arrêtée à la phrase <strong id="bandeau-num"></strong>.</span>
+    <button onclick="reprendreSession()" style="background:#d6f0d6; border-color:#4caf50;">▶️ Reprendre</button>
+    <button onclick="effacerSession()" style="background:#ffd6d6; border-color:#e07070;">🗑️ Recommencer</button>
+</div>
+
+<!-- Contrôles lecture normale -->
+<div class="controls">
+    <button onclick="startReading()">🔊 Lire</button>
+    <button id="pauseBtnLecture" onclick="togglePause()" style="display:none; background:#fff3cd; border-color:#e0b030;">⏸ Pause</button>
+    <button onclick="stopReading()">⏹ Stop</button>
+    <button id="muteBtn" onclick="toggleMute()">🔊 Son activé</button>
+    <button id="dicteeBtn" onclick="toggleDictee()">✏️ Mode dictée</button>
+    <button id="langBtn" onclick="toggleLang()" style="background:#f0f0f0; border-color:#999; font-size:22px;" title="Changer de langue">🇫🇷</button>
+    <br><br>
+    🎚️ Vitesse :
+    <input type="range" min="1" max="30" value="10" step="1" id="speedSlider">
+    <span id="speedValue">1.0×</span>
+    <br><br>
+    <label style="font-size:18px; cursor:pointer;">
+        <input type="checkbox" id="rec-check" checked style="width:20px; height:20px; vertical-align:middle;">
+        🎙️ Enregistrer ma lecture (quand le son est coupé)
+    </label>
+    <div id="rec-statut" style="margin-top:8px; font-size:18px; min-height:24px;"></div>
+</div>
+
+<div id="progression-bar" style="display:none">
+    <span class="prog-label" id="prog-label">Phrases :</span>
+    <div id="prog-dots"></div>
+    <span id="prog-texte" style="font-size:16px; color:#555"></span>
+</div>
+
+<p id="text"></p>
+
+<div id="lectures-zone" style="margin:20px 0; padding:15px; background:white; border-radius:10px; border:2px solid #d070a0;">
+    <div style="font-size:18px; color:#7a2a55; font-weight:bold; margin-bottom:10px;">🎙️ Mes lectures enregistrées</div>
+    <div id="lectures-liste"></div>
+</div>
+
+<div id="dictee-zone">
+    <label id="dictee-label">✏️ Écris ce que tu entends :</label>
+    <textarea id="dictee-input" placeholder="Écris ici..."></textarea>
+    <div class="dictee-btns">
+        <button onclick="lirePhraseActuelle()" style="background:#fff3cd; border-color:#e0b030;">🔁 Réécouter</button>
+        <button id="pauseBtnDictee" onclick="togglePause()" style="display:none; background:#fff3cd; border-color:#e0b030;">⏸ Pause</button>
+        <button onclick="corrigerPhrase()" id="btn-corriger" style="background:#d6e8ff; border-color:#5599dd;">✅ Corriger</button>
+        <button id="btn-reessayer" onclick="reessayerPhrase()" style="background:#ffe0f0; border-color:#d070a0; display:none;">🔄 Réessayer</button>
+        <button id="btn-phrase-suivante" onclick="phraseSuivante()" style="background:#d6f0d6; border-color:#4caf50; display:none;">➡️ Phrase suivante</button>
+    </div>
+</div>
+
+<div id="correction-phrase"></div>
+<div id="bilan-final"></div>
+</div>
+
+<script>
+let words = [];
+let phrases = [];
+let phraseIndex = 0;
+let currentIndex = 0;
+let isMuted = false;
+let isDictee = false;
+let isReading = false;
+let isPaused = false;
+let readingTimer = null;
+let pauseIndexSave = 0;
+let bilanScores = [];       // scores de la passe en cours
+let bilanFinal = [];        // accumulation toutes passes (index original)
+let currentUtterance = null;
+let texteSourceActuel = "";
+let essaisPhrase = 0;
+let erreursPhrase = 0;
+// Gestion des passes (cycles de révision)
+let phrasesOriginales = [];
+let phrasesEnCours = [];
+let indicesEnCours = [];
+let numeroPasse = 1;
+
+const textElement = document.getElementById("text");
+const CLE_SAVE = "dictee_sauvegarde";
+let currentLang = 'fr';
+// null = pas encore testé, true = supporté (desktop), false = non supporté (Android)
+let onBoundarySupported = null;
+
+// ── Bibliothèque de textes (5 slots Lun-Ven) ─────────────────
+const JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+const CLE_SLOTS = "lecturedictee_slots";
+let slotActif = (new Date().getDay() + 6) % 7; // ouvre sur le jour d'aujourd'hui (lundi = 0)
+
+function chargerSlots() {
+    const raw = localStorage.getItem(CLE_SLOTS);
+    var slots = raw ? JSON.parse(raw) : [];
+    while (slots.length < JOURS.length) slots.push(""); // anciennes sauvegardes à 5 jours
+    return slots;
+}
+
+function sauvegarderSlots(slots) {
+    localStorage.setItem(CLE_SLOTS, JSON.stringify(slots));
+}
+
+function afficherOnglets() {
+    const slots = chargerSlots();
+    const container = document.getElementById("slot-tabs");
+    container.innerHTML = "";
+    JOURS.forEach(function(jour, i) {
+        var btn = document.createElement("button");
+        var hasText = slots[i] && slots[i].trim().length > 0;
+        btn.textContent = (hasText ? "✅ " : "⬜ ") + jour;
+        btn.style.cssText = "font-size:16px; padding:7px 14px; margin:0; border-radius:6px; cursor:pointer;";
+        if (i === slotActif) {
+            btn.style.background = "#d6e8ff";
+            btn.style.borderColor = "#5599dd";
+            btn.style.fontWeight = "bold";
+        } else {
+            btn.style.background = hasText ? "#f0fff0" : "#f8f8f8";
+            btn.style.borderColor = hasText ? "#4caf50" : "#ccc";
+        }
+        btn.onclick = function() { selectionnerSlot(i); };
+        container.appendChild(btn);
+    });
+    // Charger le texte du slot actif dans la textarea
+    document.getElementById("source-input").value = slots[slotActif] || "";
+}
+
+function selectionnerSlot(index) {
+    // Sauvegarder le contenu actuel avant de changer
+    var slots = chargerSlots();
+    slots[slotActif] = document.getElementById("source-input").value;
+    sauvegarderSlots(slots);
+    slotActif = index;
+    afficherOnglets();
+}
+
+function sauvegarderSlot() {
+    var slots = chargerSlots();
+    var texte = document.getElementById("source-input").value.trim();
+    slots[slotActif] = texte;
+    sauvegarderSlots(slots);
+    afficherOnglets();
+    var statut = document.getElementById("source-statut");
+    statut.textContent = "💾 Sauvegardé (" + JOURS[slotActif] + ")";
+    setTimeout(function() { statut.textContent = ""; }, 2000);
+}
+
+function viderSlot() {
+    if (!confirm("Vider le texte de " + JOURS[slotActif] + " ?")) return;
+    var slots = chargerSlots();
+    slots[slotActif] = "";
+    sauvegarderSlots(slots);
+    document.getElementById("source-input").value = "";
+    afficherOnglets();
+}
+
+
+// ── Sauvegarde localStorage ──────────────────────────────────
+function sauvegarder() {
+    if (!isDictee) return;
+    const data = {
+        texte: texteSourceActuel,
+        phraseIndex: phraseIndex,
+        bilanScores: bilanScores
+    };
+    localStorage.setItem(CLE_SAVE, JSON.stringify(data));
+}
+
+function effacerSession() {
+    localStorage.removeItem(CLE_SAVE);
+    document.getElementById("bandeau-reprise").style.display = "none";
+}
+
+function verifierSauvegarde() {
+    const raw = localStorage.getItem(CLE_SAVE);
+    if (!raw) return;
+    try {
+        const data = JSON.parse(raw);
+        if (!data.texte || data.phraseIndex === undefined) return;
+        // Afficher le bandeau de reprise
+        document.getElementById("bandeau-num").textContent = data.phraseIndex + 1;
+        document.getElementById("bandeau-reprise").style.display = "flex";
+    } catch(e) { effacerSession(); }
+}
+
+function reprendreSession() {
+    const raw = localStorage.getItem(CLE_SAVE);
+    if (!raw) return;
+    try {
+        const data = JSON.parse(raw);
+        // Mettre le texte sauvegardé dans la zone source et le charger
+        document.getElementById("source-input").value = data.texte;
+        chargerNouveauTexte(true); // true = silencieux (pas de alert)
+        document.getElementById("bandeau-reprise").style.display = "none";
+        // Lancer la dictée et aller directement à la bonne phrase
+        isDictee = false; // reset pour que toggleDictee() reparte proprement
+        toggleDictee(data.phraseIndex, data.bilanScores);
+    } catch(e) { effacerSession(); }
+}
+
+// ── Utilitaires vitesse ──────────────────────────────────────
+function getPauseBtn() {
+    return isDictee
+        ? document.getElementById("pauseBtnDictee")
+        : document.getElementById("pauseBtnLecture");
+}
+
+function sliderToParams(val) {
+    const rate = val / 10;
+    const delayMs = Math.round(500 / rate);
+    return { rate, delayMs };
+}
+function getSliderVal() {
+    return parseInt(document.getElementById("speedSlider").value);
+}
+
+// ── Découpage en phrases ─────────────────────────────────────
+function decouperPhrases(texte) {
+    return texte.match(/[^.!?]+[.!?]+/g)
+        ?.map(p => p.trim())
+        .filter(p => p.length > 2) || [texte.trim()];
+}
+
+// ── Préparation du texte affiché ─────────────────────────────
+function prepareText(texteSource) {
+    const src = texteSource || textElement.innerText;
+    words = src.trim().split(/\s+/);
+    textElement.innerHTML = words.map(w => `<span class="word">${w}</span>`).join(" ");
+    if (isDictee) textElement.classList.add("dictee-mode");
+}
+
+function highlightWord() {
+    const spans = document.querySelectorAll(".word");
+    spans.forEach(s => s.classList.remove("highlight"));
+    if (currentIndex < spans.length) {
+        spans[currentIndex].classList.add("highlight");
+        noterTopMot(currentIndex);
+        currentIndex++;
+    }
+}
+
+// ── Lecture continue (voix) avec détection onboundary ───────
+function lireTexteComplet(listeMots, onFinTout) {
+    // Si Android détecté, aller directement sur mot-par-mot
+    if (onBoundarySupported === false) {
+        lireMotParMot(listeMots, 0, onFinTout);
+        return;
+    }
+
+    const { rate } = sliderToParams(getSliderVal());
+    const texteComplet = listeMots.join(" ");
+    const u = new SpeechSynthesisUtterance(texteComplet);
+    u.lang = currentLang === "en" ? "en-US" : "fr-FR";
+    u.rate = Math.max(0.1, Math.min(rate, 10));
+
+    let boundaryFired = false;
+    let testTimer = null;
+
+    u.onboundary = function(event) {
+        if (event.name === "word") {
+            if (!boundaryFired) {
+                boundaryFired = true;
+                onBoundarySupported = true;
+                if (testTimer) { clearTimeout(testTimer); testTimer = null; }
+            }
+            highlightWord();
+        }
+    };
+
+    u.onend = function() {
+        if (testTimer) { clearTimeout(testTimer); testTimer = null; }
+        if (!boundaryFired && onBoundarySupported === null) {
+            onBoundarySupported = false;
+        }
+        isReading = false;
+        getPauseBtn().style.display = "none";
+        if (onFinTout) onFinTout();
+    };
+
+    // Si onboundary pas encore confirmé, on teste pendant 1s
+    if (onBoundarySupported === null) {
+        testTimer = setTimeout(function() {
+            if (!boundaryFired && isReading) {
+                onBoundarySupported = false;
+                speechSynthesis.cancel();
+                // Basculer sur mot-par-mot depuis le début (currentIndex = 0)
+                currentIndex = 0;
+                lireMotParMot(listeMots, 0, onFinTout);
+            }
+        }, 1000);
+    }
+
+    currentUtterance = u;
+    speechSynthesis.speak(u);
+}
+
+// ── Lecture mot par mot avec son (fallback Android) ──────────
+function lireMotParMot(listeMots, fromIndex, onFinTout) {
+    if (!isReading || isPaused) return;
+    if (fromIndex >= listeMots.length) {
+        isReading = false;
+        getPauseBtn().style.display = "none";
+        if (onFinTout) onFinTout();
+        return;
+    }
+
+    // Calculer l'index absolu dans words[]
+    const startOffset = words.length - listeMots.length;
+    const absIndex = startOffset + fromIndex;
+
+    // Surligner
+    const spans = document.querySelectorAll(".word");
+    spans.forEach(function(s) { s.classList.remove("highlight"); });
+    if (absIndex < spans.length) {
+        spans[absIndex].classList.add("highlight");
+        currentIndex = absIndex + 1;
+    }
+
+    // Nettoyer la ponctuation pour la voix
+    var word = listeMots[fromIndex].replace(/[.,!?;:]/g, "").trim();
+    if (!word) {
+        readingTimer = setTimeout(function() {
+            lireMotParMot(listeMots, fromIndex + 1, onFinTout);
+        }, 80);
+        return;
+    }
+
+    var { rate } = sliderToParams(getSliderVal());
+    var u = new SpeechSynthesisUtterance(word);
+    u.lang = currentLang === "en" ? "en-US" : "fr-FR";
+    u.rate = Math.max(0.1, Math.min(rate, 10));
+    u.onend = function() {
+        if (!isReading || isPaused) return;
+        readingTimer = setTimeout(function() {
+            lireMotParMot(listeMots, fromIndex + 1, onFinTout);
+        }, 80);
+    };
+    currentUtterance = u;
+    speechSynthesis.speak(u);
+}
+
+// ── Lecture mode muet (timer pur) ────────────────────────────
+function scheduleNext() {
+    if (!isReading || isPaused) return;
+    if (currentIndex >= words.length) { finLectureNaturelle(); return; }
+    highlightWord();
+    var { delayMs } = sliderToParams(getSliderVal());
+    readingTimer = setTimeout(function() { scheduleNext(); }, delayMs);
+}
+
+function lancerLecture(onFinTout) {
+    if (isMuted) {
+        scheduleNext();
+    } else if (onBoundarySupported === false) {
+        lireMotParMot(words, 0, onFinTout);
+    } else {
+        lireTexteComplet(words, onFinTout);
+    }
+}
+
+
+// ── Lecture normale ──────────────────────────────────────────
+function startReading() {
+    stopReading();
+    arreterEcoute();
+    prepareText();
+    currentIndex = 0;
+    isPaused = false;
+
+    const demarrer = function() {
+        isReading = true;
+        const pb = getPauseBtn();
+        pb.style.display = "inline-block";
+        pb.textContent = "⏸ Pause";
+        lancerLecture(null);
+    };
+
+    var veutEnregistrer = isMuted && !isDictee && document.getElementById("rec-check").checked;
+    if (!veutEnregistrer) { demarrer(); return; }
+
+    var tk = ++lectureToken;
+    var avecMicro = true;
+    demarrerEnregistrement(tk).catch(function(err) {
+        avecMicro = false;
+        console.warn("Enregistrement impossible :", err);
+        if (tk === lectureToken) majStatutRec("⚠️ Micro indisponible ou refusé : la lecture ne sera pas enregistrée.", "#b26a00");
+    }).then(function() {
+        if (tk !== lectureToken) {
+            // Stop pressé pendant la demande d'autorisation du micro
+            if (enreg && enreg.token === tk) terminerEnregistrement(false);
+            return;
+        }
+        return compteARebours(tk, avecMicro).then(function(ok) {
+            if (!ok || tk !== lectureToken) return;
+            if (avecMicro) lancerEnregistrement();
+            demarrer();
+        });
+    });
+}
+
+// ── Compte à rebours 3-2-1-Go (visuel uniquement, pour ne pas être enregistré) ──
+let cdTimer = null;
+function masquerCompteARebours() {
+    if (cdTimer) { clearTimeout(cdTimer); cdTimer = null; }
+    var el = document.getElementById("compte-rebours");
+    if (el) el.remove();
+}
+function parlerCompteARebours(texte, onFin) {
+    var fini = false;
+    function fin() { if (!fini) { fini = true; if (onFin) onFin(); } }
+    try {
+        speechSynthesis.cancel();
+        var u = new SpeechSynthesisUtterance(texte);
+        u.lang = currentLang === "en" ? "en-US" : "fr-FR";
+        u.rate = 1;
+        u.volume = 1;
+        if (onFin) {
+            u.onend = fin;
+            u.onerror = fin;
+            setTimeout(fin, 1000); // sécurité si la voix ne répond pas
+        }
+        speechSynthesis.speak(u);
+    } catch (e) { fin(); }
+}
+
+function compteARebours(tk, avecMicro) {
+    return new Promise(function(resolve) {
+        masquerCompteARebours();
+        var el = document.createElement("div");
+        el.id = "compte-rebours";
+        el.style.cssText = "position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.88); font-family:inherit; font-weight:bold; color:#1a3d6e; font-size:min(40vw,220px); pointer-events:none;";
+        document.body.appendChild(el);
+        var en = currentLang === "en";
+        var etapes = [
+            { txt: "3", voix: en ? "Three" : "Trois" },
+            { txt: "2", voix: en ? "Two" : "Deux" },
+            { txt: "1", voix: en ? "One" : "Un" },
+            { txt: "Go !", voix: en ? "Go!" : "Go !" }
+        ];
+        var i = 0;
+        function suivant() {
+            if (tk !== lectureToken) { masquerCompteARebours(); resolve(false); return; }
+            var e = etapes[i];
+            el.textContent = e.txt;
+            if (i === etapes.length - 1) {
+                // "Go !" : on attend la fin de la voix avant de lancer micro + lecture,
+                // pour que le "Go" ne soit pas dans l'enregistrement
+                el.style.color = "#2e7d32";
+                el.style.fontSize = "min(30vw,160px)";
+                parlerCompteARebours(e.voix, function() {
+                    if (tk !== lectureToken) { masquerCompteARebours(); resolve(false); return; }
+                    if (cdTimer) clearTimeout(cdTimer);
+                    cdTimer = setTimeout(masquerCompteARebours, 400);
+                    resolve(true);
+                });
+                return;
+            }
+            parlerCompteARebours(e.voix);
+            i++;
+            cdTimer = setTimeout(suivant, 1000);
+        }
+        if (avecMicro) majStatutRec("🎙️ Prépare-toi… la lecture démarre dans 3 secondes.", "#1a3d6e");
+        suivant();
+    });
+}
+
+function lirePhraseActuelle() {
+    stopReading();
+    currentIndex = 0;
+    isReading = true;
+    isPaused = false;
+    const pb = document.getElementById("pauseBtnDictee");
+    pb.style.display = "inline-block";
+    pb.textContent = "⏸ Pause";
+    lancerLecture(null);
+}
+
+function togglePause() {
+    if (!isReading) return;
+    const pb = getPauseBtn();
+    if (!isPaused) {
+        isPaused = true;
+        pauseIndexSave = currentIndex;
+        pb.textContent = "▶️ Reprendre";
+        pauserEnregistrement();
+        speechSynthesis.cancel();
+        if (readingTimer) { clearTimeout(readingTimer); readingTimer = null; }
+    } else {
+        isPaused = false;
+        pb.textContent = "⏸ Pause";
+        reprendreEnregistrement();
+        currentIndex = pauseIndexSave;
+        if (isMuted) {
+            scheduleNext();
+        } else {
+            lireTexteComplet(words.slice(currentIndex), null);
+        }
+    }
+}
+
+function stopReading() {
+    lectureToken++;
+    masquerCompteARebours();
+    if (enreg) { terminerEnregistrement(false); majStatutRec("⏹ Enregistrement annulé.", "#666"); }
+    speechSynthesis.cancel();
+    if (readingTimer) { clearTimeout(readingTimer); readingTimer = null; }
+    currentIndex = 0;
+    isPaused = false;
+    isReading = false;
+    document.getElementById("pauseBtnLecture").style.display = "none";
+    document.getElementById("pauseBtnDictee").style.display = "none";
+    document.querySelectorAll(".word").forEach(s => s.classList.remove("highlight"));
+}
+
+function toggleMute() {
+    isMuted = !isMuted;
+    const btn = document.getElementById("muteBtn");
+    if (isMuted) {
+        btn.textContent = UI[currentLang].sonCoupe;
+        btn.classList.add("muted-on");
+        if (isReading && !isPaused) {
+            speechSynthesis.cancel();
+            if (readingTimer) { clearTimeout(readingTimer); readingTimer = null; }
+            scheduleNext();
+        }
+    } else {
+        btn.textContent = UI[currentLang].sonActif;
+        btn.classList.remove("muted-on");
+        if (enreg) { terminerEnregistrement(false); majStatutRec("⏹ Son réactivé : enregistrement annulé.", "#666"); }
+        if (isReading && !isPaused) {
+            if (readingTimer) { clearTimeout(readingTimer); readingTimer = null; }
+            lireTexteComplet(words.slice(currentIndex), null);
+        }
+    }
+}
+
+// ── MODE DICTÉE ──────────────────────────────────────────────
+// departerIndex et departerScores sont utilisés lors d'une reprise de session
+function toggleDictee(departerIndex, departerScores) {
+    isDictee = !isDictee;
+    const btn = document.getElementById("dicteeBtn");
+    stopReading();
+
+    if (isDictee) {
+        btn.textContent = UI[currentLang].lectureBtn;
+        btn.classList.add("dictee-on");
+
+        texteSourceActuel = textElement.innerText.trim();
+        phrasesOriginales = decouperPhrases(texteSourceActuel);
+        // Première passe : toutes les phrases
+        phrasesEnCours = [...phrasesOriginales];
+        indicesEnCours = phrasesOriginales.map((_, i) => i);
+        phrases = phrasesEnCours;
+        phraseIndex = 0;
+        bilanScores = [];
+        bilanFinal = phrasesOriginales.map(() => null); // null = pas encore traitée
+        numeroPasse = 1;
+
+        prepareText(texteSourceActuel);
+        afficherProgression();
+        document.getElementById("dictee-zone").style.display = "block";
+        document.getElementById("correction-phrase").style.display = "none";
+        document.getElementById("bilan-final").style.display = "none";
+        document.getElementById("btn-phrase-suivante").style.display = "none";
+        document.getElementById("btn-reessayer").style.display = "none";
+
+        isMuted = false;
+        document.getElementById("muteBtn").textContent = UI[currentLang].sonActif;
+        document.getElementById("muteBtn").classList.remove("muted-on");
+        document.getElementById("muteBtn").disabled = true;
+
+        chargerPhrase(0);
+    } else {
+        btn.textContent = UI[currentLang].dicteeBtn;
+        btn.classList.remove("dictee-on");
+        textElement.classList.remove("dictee-mode");
+        document.getElementById("dictee-zone").style.display = "none";
+        document.getElementById("correction-phrase").style.display = "none";
+        document.getElementById("bilan-final").style.display = "none";
+        document.getElementById("progression-bar").style.display = "none";
+        document.getElementById("muteBtn").disabled = false;
+        const ta = document.getElementById("dictee-input");
+        ta.readOnly = false;
+        ta.style.background = "";
+        effacerSession(); // On sort de la dictée : on efface la sauvegarde
+    }
+}
+
+function chargerPhrase(index) {
+    if (index >= phrases.length) { afficherBilan(); return; }
+    phraseIndex = index;
+
+    words = phrases[index].trim().split(/\s+/);
+    textElement.innerHTML = words.map(w => `<span class="word">${w}</span>`).join(" ");
+    textElement.classList.add("dictee-mode");
+
+    const ta = document.getElementById("dictee-input");
+    ta.value = "";
+    ta.readOnly = false;
+    ta.style.background = "";
+
+    document.getElementById("correction-phrase").style.display = "none";
+    document.getElementById("btn-phrase-suivante").style.display = "none";
+    document.getElementById("btn-reessayer").style.display = "none";
+    const btnCorriger = document.getElementById("btn-corriger");
+    btnCorriger.disabled = false;
+    btnCorriger.style.opacity = "1";
+    // Réinitialiser les compteurs pour cette phrase
+    essaisPhrase = 0;
+    erreursPhrase = 0;
+    document.getElementById("dictee-label").textContent = UI[currentLang].dicteeLabel(index + 1, phrases.length);
+
+    afficherProgression();
+    sauvegarder(); // Sauvegarde à chaque nouvelle phrase
+    lirePhraseActuelle();
+}
+
+function corrigerPhrase() {
+    stopReading();
+    const ta = document.getElementById("dictee-input");
+    const saisie = ta.value.trim();
+    if (!saisie) { alert("Écris d'abord quelque chose !"); return; }
+
+    const motsSaisie = normaliser(saisie).split(/\s+/).filter(m => m.length > 0);
+    const motsOriginaux = words.map(w => normaliser(w)).filter(m => m.length > 0);
+
+    let html = `<h3>📝 Phrase ${phraseIndex + 1}</h3><p>`;
+    let bons = 0;
+    const max = Math.max(motsSaisie.length, motsOriginaux.length);
+
+    for (let i = 0; i < max; i++) {
+        const original = motsOriginaux[i] || "—";
+        const saisi = motsSaisie[i] || "—";
+        const motAffiche = words[i] || original;
+        if (saisi === original) {
+            html += `<span class="mot-juste">${motAffiche}</span> `;
+            bons++;
+        } else {
+            html += `<span class="mot-faux" title="Tu as écrit : ${saisi}">${motAffiche}</span> `;
+        }
+    }
+    html += `</p>`;
+
+    essaisPhrase++;
+    const fautes = motsOriginaux.length - bons;
+    erreursPhrase += fautes;
+
+    const estParfait = fautes === 0;
+
+    // Verrouiller le champ et désactiver le bouton Corriger dans tous les cas
+    ta.readOnly = true;
+    ta.style.background = "#f5f5f5";
+    ta.style.border = "1px solid #ccc";
+    ta.style.color = "#888";
+    document.getElementById("btn-corriger").disabled = true;
+    document.getElementById("btn-corriger").style.opacity = "0.4";
+
+    if (estParfait) {
+        // Perfect sur ce dernier essai → on peut passer à la suite
+        const msgEssais = essaisPhrase > 1
+            ? ` (réussi en ${essaisPhrase} essai${essaisPhrase > 1 ? "s" : ""}, ${erreursPhrase} erreur${erreursPhrase > 1 ? "s" : ""} au total)`
+            : "";
+        html += `<p>🌟 Parfait !${msgEssais}</p>`;
+        const scorePhrase = { bons: motsOriginaux.length, total: motsOriginaux.length, essais: essaisPhrase, erreursTotal: erreursPhrase };
+        bilanScores.push(scorePhrase);
+        // Mettre à jour le bilan final sur l'index original
+        const idxOriginal = indicesEnCours[phraseIndex];
+        // On garde le meilleur score (essais du premier coup > essais multiples)
+        if (bilanFinal[idxOriginal] === null || scorePhrase.essais < bilanFinal[idxOriginal].essais) {
+            bilanFinal[idxOriginal] = scorePhrase;
+        }
+        textElement.classList.remove("dictee-mode");
+
+        const btnSuiv = document.getElementById("btn-phrase-suivante");
+        btnSuiv.textContent = phraseIndex + 1 < phrases.length
+            ? `➡️ Phrase suivante (${phraseIndex + 2}/${phrases.length})`
+            : "🏁 Voir le bilan final";
+        btnSuiv.style.display = "inline-block";
+        document.getElementById("btn-reessayer").style.display = "none";
+
+    } else {
+        // Encore des erreurs → on reste bloqué sur cette phrase
+        const msgEssais = essaisPhrase > 1 ? ` (essai n°${essaisPhrase})` : "";
+        html += `<p>💪 ${bons} / ${motsOriginaux.length} mots justes${msgEssais} — réessaie jusqu'au perfect !</p>`;
+        textElement.classList.remove("dictee-mode");
+        document.getElementById("btn-reessayer").style.display = "inline-block";
+        document.getElementById("btn-phrase-suivante").style.display = "none";
+    }
+
+    const corrDiv = document.getElementById("correction-phrase");
+    corrDiv.innerHTML = html;
+    corrDiv.style.display = "block";
+}
+
+function reessayerPhrase() {
+    const ta = document.getElementById("dictee-input");
+    // Garder le texte avec les erreurs pour qu'elle corrige elle-même
+    ta.readOnly = false;
+    ta.style.background = "";
+    ta.style.border = "";
+    ta.style.color = "";
+    // Réactiver le bouton Corriger
+    const btnCorriger = document.getElementById("btn-corriger");
+    btnCorriger.disabled = false;
+    btnCorriger.style.opacity = "1";
+    document.getElementById("correction-phrase").style.display = "none";
+    document.getElementById("btn-reessayer").style.display = "none";
+    textElement.classList.add("dictee-mode");
+    // Relire la phrase pour qu'elle se souvienne
+    lirePhraseActuelle();
+    setTimeout(() => ta.focus(), 500);
+}
+
+function phraseSuivante() {
+    document.getElementById("correction-phrase").style.display = "none";
+    chargerPhrase(phraseIndex + 1);
+}
+
+function afficherProgression() {
+    const bar = document.getElementById("progression-bar");
+    bar.style.display = "flex";
+    const dots = document.getElementById("prog-dots");
+    dots.innerHTML = "";
+    phrases.forEach((_, i) => {
+        const d = document.createElement("div");
+        d.className = "prog-dot";
+        if (i < phraseIndex) d.classList.add("done");
+        else if (i === phraseIndex) d.classList.add("current");
+        dots.appendChild(d);
+    });
+    document.getElementById("prog-texte").textContent = `${phraseIndex + 1} / ${phrases.length}`;
+}
+
+function afficherBilan() {
+    stopReading();
+    document.getElementById("dictee-zone").style.display = "none";
+    document.getElementById("correction-phrase").style.display = "none";
+    textElement.classList.remove("dictee-mode");
+
+    // Identifier les phrases qui ont eu des erreurs dans cette passe
+    const indicesAvecErreurs = [];
+    bilanScores.forEach((s, i) => {
+        if (s.essais > 1 || s.erreursTotal > 0) {
+            indicesAvecErreurs.push(indicesEnCours[i]);
+        }
+    });
+
+    // S'il reste des phrases avec erreurs → nouvelle passe uniquement sur celles-là
+    if (indicesAvecErreurs.length > 0) {
+        // Afficher bilan intermédiaire
+        afficherBilanIntermediaire(indicesAvecErreurs);
+    } else {
+        // Toutes parfaites du premier coup → bilan final
+        effacerSession();
+        afficherBilanFinal();
+    }
+}
+
+function afficherBilanIntermediaire(indicesAvecErreurs) {
+    numeroPasse++;
+    let html = `<h3>${UI[currentLang].bilanIntermTitre(numeroPasse - 1)}</h3><ul>`;
+    bilanScores.forEach((s, i) => {
+        const idxOrig = indicesEnCours[i];
+        const avecErreur = s.essais > 1 || s.erreursTotal > 0;
+        const emoji = avecErreur ? "🔁" : "🌟";
+        const detail = s.essais > 1
+            ? ` — ${s.essais} essais, ${s.erreursTotal} erreur${s.erreursTotal > 1 ? "s" : ""}`
+            : " — perfect du premier coup !";
+        html += `<li>${emoji} Phrase ${idxOrig + 1} : <strong>Perfect</strong>${detail}</li>`;
+    });
+    html += `</ul>`;
+    html += `<p style="font-size:18px; color:#c62828;">🔁 ${indicesAvecErreurs.length} phrase${indicesAvecErreurs.length > 1 ? "s" : ""} à retravailler !</p>`;
+    html += `<button onclick="lancerNouvellePassse()" style="margin-top:12px; background:#ffe0d6; border:1px solid #e07050; border-radius:6px; padding:10px 16px; font-size:18px; cursor:pointer;">🔄 Retravailler ces phrases</button>`;
+
+    document.getElementById("bilan-final").innerHTML = html;
+    document.getElementById("bilan-final").style.display = "block";
+
+    // Préparer la prochaine passe
+    phrasesEnCours = indicesAvecErreurs.map(i => phrasesOriginales[i]);
+    indicesEnCours = indicesAvecErreurs;
+    phrases = phrasesEnCours;
+    bilanScores = [];
+}
+
+function lancerNouvellePassse() {
+    document.getElementById("bilan-final").style.display = "none";
+    phraseIndex = 0;
+    document.getElementById("dictee-zone").style.display = "block";
+    document.getElementById("correction-phrase").style.display = "none";
+
+    const pb = document.getElementById("progression-bar");
+    pb.style.display = "flex";
+
+    chargerPhrase(0);
+}
+
+function afficherBilanFinal() {
+    let html = `<h3>${UI[currentLang].bilanTitre}</h3><ul>`;
+    let totalErreurs = 0;
+    let nbPremierCoup = 0;
+
+    phrasesOriginales.forEach((_, idxOrig) => {
+        const s = bilanFinal[idxOrig];
+        if (!s) return;
+        const avecErreur = s.essais > 1 || s.erreursTotal > 0;
+        if (!avecErreur) nbPremierCoup++;
+        totalErreurs += s.erreursTotal;
+        const emoji = !avecErreur ? "🌟" : s.erreursTotal <= 2 ? "👍" : "💪";
+        const detail = s.essais > 1
+            ? ` — ${UI[currentLang].msgEssais(s.essais, s.erreursTotal)}`
+            : ` — ${UI[currentLang].parfait}`;
+        html += `<li>${emoji} ${UI[currentLang].phraseLabel(idxOrig)} : <strong>Perfect</strong>${detail}</li>`;
+    });
+
+    html += `</ul>`;
+    html += `<p style="font-size:20px;">${UI[currentLang].premierCoup(nbPremierCoup, phrasesOriginales.length)}</p>`;
+    if (totalErreurs > 0) {
+        html += `<p style="font-size:18px; color:#888;">${UI[currentLang].totalErreurs(totalErreurs)}</p>`;
+    }
+
+    if (nbPremierCoup === phrasesOriginales.length) {
+        html += `<p>${UI[currentLang].msgFinal1}</p>`;
+    } else if (nbPremierCoup >= phrasesOriginales.length * 0.7) {
+        html += `<p>${UI[currentLang].msgFinal2}</p>`;
+    } else {
+        html += `<p>${UI[currentLang].msgFinal3}</p>`;
+    }
+
+    html += `<button onclick="relancerDictee()" style="margin-top:12px; background:#d6e8ff; border:1px solid #5599dd; border-radius:6px; padding:10px 16px; font-size:18px; cursor:pointer;">${UI[currentLang].recommencerBtn}</button>`;
+
+    document.getElementById("bilan-final").innerHTML = html;
+    document.getElementById("bilan-final").style.display = "block";
+
+    document.querySelectorAll(".prog-dot").forEach(d => {
+        d.classList.remove("current");
+        d.classList.add("done");
+    });
+}
+
+// ── Language labels ─────────────────────────────────────────
+const UI = {
+    fr: {
+        h2: "Lecture & Dictée",
+        sourceLabel: "📋 Texte à lire (colle ou écris ton propre texte, puis clique sur Charger)",
+        sourcePlaceholder: "Colle ton texte ici...",
+        sourceBtn: "📥 Charger ce texte",
+        bandeauTexte: "📌 Dictée en cours sauvegardée — tu t'étais arrêtée à la phrase",
+        bandeauReprendre: "▶️ Reprendre",
+        bandeauRecommencer: "🗑️ Recommencer",
+        lireBtn: "🔊 Lire",
+        stopBtn: "⏹ Stop",
+        sonActif: "🔊 Son activé",
+        sonCoupe: "🔇 Son coupé",
+        dicteeBtn: "✏️ Mode dictée",
+        lectureBtn: "📖 Mode lecture",
+        vitesse: "🎚️ Vitesse :",
+        phrases: "Phrases :",
+        dicteeLabel: (i, n) => `✏️ Phrase ${i} sur ${n} — écris ce que tu entends :`,
+        reecouterBtn: "🔁 Réécouter",
+        corrigerBtn: "✅ Corriger",
+        reessayerBtn: "🔄 Réessayer",
+        phraseInput: "Écris ici...",
+        bilanTitre: "🏆 Bilan final — toutes les phrases maîtrisées !",
+        bilanIntermTitre: (p) => `📋 Bilan — passe ${p}`,
+        retravaillerBtn: "🔄 Retravailler ces phrases",
+        recommencerBtn: "🔄 Recommencer la dictée",
+        parfait: "du premier coup !",
+        msgEssais: (e, err) => `${e} essais, ${err} erreur${err > 1 ? "s" : ""}`,
+        retravailler: (n) => `🔁 ${n} phrase${n > 1 ? "s" : ""} à retravailler !`,
+        premierCoup: (n, t) => `🎯 ${n} / ${t} phrases réussies du premier coup`,
+        totalErreurs: (n) => `Total d'erreurs commises : ${n}`,
+        msgFinal1: "🌟 Incroyable ! Toutes les phrases parfaites du premier coup !",
+        msgFinal2: "👏 Très bien ! Tu maîtrises le texte !",
+        msgFinal3: "💪 Toutes les phrases sont maîtrisées — continue à t'entraîner !",
+        progression: (i, n) => `${i} / ${n}`,
+        phraseLabel: (i) => `Phrase ${i + 1}`,
+        defaultText: `Ce matin, Lina se réveille tôt. Elle ouvre la fenêtre de sa chambre et regarde le ciel. Le soleil commence à apparaître derrière les arbres. Après le petit déjeuner, elle prend son sac et part à l'école. Sur le chemin, elle rencontre son amie Sarah. Les deux filles discutent de leur projet de sciences. En classe, elles travaillent sur les animaux marins et découvrent des informations étonnantes. À midi, elles déjeunent dans la cour avec leurs camarades. L'après-midi passe rapidement entre les cours et les activités. Quand la sonnerie retentit, Lina rentre chez elle avec le sourire. Elle raconte sa journée à sa famille avant de faire ses devoirs.`,
+    },
+    en: {
+        h2: "Reading & Dictation",
+        sourceLabel: "📋 Text to read (paste or type your own text, then click Load)",
+        sourcePlaceholder: "Paste your text here...",
+        sourceBtn: "📥 Load this text",
+        bandeauTexte: "📌 Dictation in progress — you stopped at sentence",
+        bandeauReprendre: "▶️ Resume",
+        bandeauRecommencer: "🗑️ Start over",
+        lireBtn: "🔊 Read",
+        stopBtn: "⏹ Stop",
+        sonActif: "🔊 Sound on",
+        sonCoupe: "🔇 Sound off",
+        dicteeBtn: "✏️ Dictation mode",
+        lectureBtn: "📖 Reading mode",
+        vitesse: "🎚️ Speed:",
+        phrases: "Sentences:",
+        dicteeLabel: (i, n) => `✏️ Sentence ${i} of ${n} — write what you hear:`,
+        reecouterBtn: "🔁 Listen again",
+        corrigerBtn: "✅ Check",
+        reessayerBtn: "🔄 Try again",
+        phraseInput: "Type here...",
+        bilanTitre: "🏆 Final results — all sentences mastered!",
+        bilanIntermTitre: (p) => `📋 Results — round ${p}`,
+        retravaillerBtn: "🔄 Redo these sentences",
+        recommencerBtn: "🔄 Restart dictation",
+        parfait: "first try!",
+        msgEssais: (e, err) => `${e} attempts, ${err} error${err > 1 ? "s" : ""}`,
+        retravailler: (n) => `🔁 ${n} sentence${n > 1 ? "s" : ""} to redo!`,
+        premierCoup: (n, t) => `🎯 ${n} / ${t} sentences correct on the first try`,
+        totalErreurs: (n) => `Total errors made: ${n}`,
+        msgFinal1: "🌟 Amazing! All sentences perfect on the first try!",
+        msgFinal2: "👏 Great work! You've mastered the text!",
+        msgFinal3: "💪 All sentences mastered — keep practising!",
+        progression: (i, n) => `${i} / ${n}`,
+        phraseLabel: (i) => `Sentence ${i + 1}`,
+        defaultText: `The sun was shining brightly over the small town. Emma woke up early and looked out her bedroom window. She could see the birds flying over the rooftops. After breakfast, she packed her bag and walked to school. On the way, she met her friend Tom. They talked about their science project on ocean animals. In class, they discovered some amazing facts about dolphins. At lunchtime, they ate outside with their classmates. The afternoon went by quickly with lessons and activities. When the bell rang, Emma walked home with a big smile. She told her family all about her day before doing her homework.`,
+    }
+};
+
+function toggleLang() {
+    currentLang = currentLang === 'fr' ? 'en' : 'fr';
+    const btn = document.getElementById("langBtn");
+    btn.textContent = currentLang === 'fr' ? '🇫🇷' : '🇬🇧';
+    btn.title = currentLang === 'fr' ? 'Switch to English' : 'Passer en français';
+    applyLangUI();
+}
+
+function applyLangUI() {
+    const L = UI[currentLang];
+    // Stop any reading in progress
+    stopReading();
+    if (isDictee) { isDictee = false; toggleDictee(); }
+
+    document.querySelector("h2").textContent = L.h2;
+    document.querySelector("label[for='source-input']").textContent = L.sourceLabel;
+    document.getElementById("source-input").placeholder = L.sourcePlaceholder;
+    document.querySelector("button[onclick='chargerNouveauTexte()']").textContent = L.sourceBtn;
+
+    document.getElementById("bandeau-texte").childNodes[0].textContent = L.bandeauTexte + " ";
+    document.querySelector("button[onclick='reprendreSession()']").textContent = L.bandeauReprendre;
+    document.querySelector("button[onclick='effacerSession()']").textContent = L.bandeauRecommencer;
+
+    document.querySelector("button[onclick='startReading()']").textContent = L.lireBtn;
+    document.querySelector("button[onclick='stopReading()']").textContent = L.stopBtn;
+    document.getElementById("muteBtn").textContent = isMuted ? L.sonCoupe : L.sonActif;
+    document.getElementById("dicteeBtn").textContent = L.dicteeBtn;
+
+    document.getElementById("prog-label").textContent = L.phrases;
+
+    document.querySelector("button[onclick='lirePhraseActuelle()']").textContent = L.reecouterBtn;
+    document.getElementById("btn-corriger").textContent = L.corrigerBtn;
+    document.getElementById("btn-reessayer").textContent = L.reessayerBtn;
+    document.getElementById("dictee-input").placeholder = L.phraseInput;
+
+    // Reload text with new language default
+    chargerNouveauTexte(true);
+}
+
+function relancerDictee() {
+    isDictee = false;
+    document.getElementById("dicteeBtn").textContent = UI[currentLang].dicteeBtn;
+    toggleDictee();
+}
+
+// ── Chargement d'un nouveau texte ────────────────────────────
+function chargerNouveauTexte(silencieux) {
+    stopReading();
+
+    if (isDictee) {
+        isDictee = false;
+        document.getElementById("dicteeBtn").textContent = UI[currentLang].dicteeBtn;
+        document.getElementById("dicteeBtn").classList.remove("dictee-on");
+        document.getElementById("dictee-zone").style.display = "none";
+        document.getElementById("correction-phrase").style.display = "none";
+        document.getElementById("bilan-final").style.display = "none";
+        document.getElementById("progression-bar").style.display = "none";
+        document.getElementById("muteBtn").disabled = false;
+        const ta = document.getElementById("dictee-input");
+        ta.readOnly = false;
+        ta.style.background = "";
+        ta.style.border = "";
+    }
+
+    // Sauvegarder le slot actif avant de charger
+    var slots = chargerSlots();
+    slots[slotActif] = document.getElementById("source-input").value;
+    sauvegarderSlots(slots);
+    afficherOnglets();
+
+    const nouveauTexte = document.getElementById("source-input").value.trim();
+    if (!nouveauTexte) {
+        if (!silencieux) alert("Écris un texte dans ce slot avant de charger !");
+        return;
+    }
+
+    textElement.classList.remove("dictee-mode");
+    prepareText(nouveauTexte);
+
+    if (!silencieux) {
+        const statut = document.getElementById("source-statut");
+        statut.textContent = "✅ Texte chargé !";
+        setTimeout(() => { statut.textContent = ""; }, 2500);
+    }
+}
+
+function normaliser(str) {
+    return str.toLowerCase()
+        .replace(/[.,!?;:"\u201c\u201d\u2018\u2019«»'']/g, "")
+        .replace(/'/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+document.getElementById("speedSlider").addEventListener("input", function() {
+    const rate = (parseInt(this.value) / 10).toFixed(1);
+    document.getElementById("speedValue").innerText = rate + "×";
+});
+
+// ── Initialisation ───────────────────────────────────────────
+// ── Enregistreur de lecture ──────────────────────────────────
+let enreg = null;        // enregistrement en cours
+let lectureToken = 0;    // sert à annuler un démarrage asynchrone
+let ecoute = null;       // réécoute en cours
+const DB_NAME = "lecturedictee_audio";
+const DB_STORE = "lectures";
+
+function majStatutRec(msg, couleur) {
+    var el = document.getElementById("rec-statut");
+    el.textContent = msg;
+    el.style.color = couleur || "#333";
+}
+
+// IndexedDB (stockage local des fichiers audio sur le téléphone)
+function ouvrirDB() {
+    return new Promise(function(res, rej) {
+        var r = indexedDB.open(DB_NAME, 1);
+        r.onupgradeneeded = function() { r.result.createObjectStore(DB_STORE, { keyPath: "id" }); };
+        r.onsuccess = function() { res(r.result); };
+        r.onerror = function() { rej(r.error); };
+    });
+}
+async function dbTous() {
+    var db = await ouvrirDB();
+    return new Promise(function(res, rej) {
+        var q = db.transaction(DB_STORE).objectStore(DB_STORE).getAll();
+        q.onsuccess = function() { res(q.result); };
+        q.onerror = function() { rej(q.error); };
+    });
+}
+async function dbLire(id) {
+    var db = await ouvrirDB();
+    return new Promise(function(res, rej) {
+        var q = db.transaction(DB_STORE).objectStore(DB_STORE).get(id);
+        q.onsuccess = function() { res(q.result); };
+        q.onerror = function() { rej(q.error); };
+    });
+}
+async function dbEcrire(obj) {
+    var db = await ouvrirDB();
+    return new Promise(function(res, rej) {
+        var tx = db.transaction(DB_STORE, "readwrite");
+        tx.objectStore(DB_STORE).put(obj);
+        tx.oncomplete = function() { res(); };
+        tx.onerror = function() { rej(tx.error); };
+    });
+}
+async function dbSupprimer(id) {
+    var db = await ouvrirDB();
+    return new Promise(function(res, rej) {
+        var tx = db.transaction(DB_STORE, "readwrite");
+        tx.objectStore(DB_STORE).delete(id);
+        tx.oncomplete = function() { res(); };
+        tx.onerror = function() { rej(tx.error); };
+    });
+}
+
+function choisirMime() {
+    var cands = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
+    for (var i = 0; i < cands.length; i++) {
+        if (MediaRecorder.isTypeSupported(cands[i])) return cands[i];
+    }
+    return "";
+}
+
+async function demarrerEnregistrement(tk) {
+    if (!navigator.mediaDevices || !window.MediaRecorder) throw new Error("MediaRecorder non supporté");
+    var stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    var mime = choisirMime();
+    var mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    var e = {
+        mr: mr, stream: stream, chunks: [], times: [],
+        t0: 0, pausedTotal: 0, pausedAt: 0, wake: null,
+        mime: mr.mimeType || mime || "audio/webm",
+        jour: JOURS[slotActif], vitesse: getSliderVal() / 10,
+        texte: words.join(" "),
+        token: tk
+    };
+    mr.ondataavailable = function(ev) { if (ev.data && ev.data.size) e.chunks.push(ev.data); };
+    try { if (navigator.wakeLock) e.wake = await navigator.wakeLock.request("screen"); } catch (_) {}
+    enreg = e; // micro prêt ; l'enregistrement démarre vraiment au "Go !"
+}
+
+function lancerEnregistrement() {
+    if (!enreg || enreg.mr.state !== "inactive") return;
+    enreg.mr.start();
+    enreg.t0 = performance.now();
+    majStatutRec("🔴 Enregistrement en cours… lis en suivant le surlignage jaune.", "#c62828");
+}
+
+function tempsEnreg(e) {
+    var maintenant = performance.now();
+    return maintenant - e.t0 - e.pausedTotal - (e.pausedAt ? maintenant - e.pausedAt : 0);
+}
+
+function noterTopMot(index) {
+    if (enreg && !enreg.pausedAt) enreg.times[index] = tempsEnreg(enreg);
+}
+
+function pauserEnregistrement() {
+    if (!enreg || enreg.pausedAt) return;
+    enreg.pausedAt = performance.now();
+    try { enreg.mr.pause(); } catch (_) {}
+    majStatutRec("⏸ Enregistrement en pause.", "#b26a00");
+}
+
+function reprendreEnregistrement() {
+    if (!enreg || !enreg.pausedAt) return;
+    enreg.pausedTotal += performance.now() - enreg.pausedAt;
+    enreg.pausedAt = 0;
+    try { enreg.mr.resume(); } catch (_) {}
+    majStatutRec("🔴 Enregistrement en cours…", "#c62828");
+}
+
+function finLectureNaturelle() {
+    terminerEnregistrement(true);
+    stopReading();
+}
+
+function terminerEnregistrement(sauver) {
+    var e = enreg;
+    if (!e) return;
+    enreg = null;
+    var duree = Math.max(0, tempsEnreg(e)) / 1000;
+    e.mr.onstop = async function() {
+        e.stream.getTracks().forEach(function(t) { t.stop(); });
+        if (e.wake) { try { e.wake.release(); } catch (_) {} }
+        if (!sauver) return;
+        try {
+            majStatutRec("⏳ Sauvegarde de la lecture…", "#555");
+            var blob = new Blob(e.chunks, { type: e.mime });
+            var partage = null;
+            try { partage = await versWav(blob); } catch (err) { console.warn("Conversion WAV impossible", err); }
+            await dbEcrire({
+                id: Date.now(), date: new Date().toISOString(),
+                jour: e.jour, vitesse: e.vitesse, texte: e.texte,
+                times: e.times, mime: e.mime, duree: duree,
+                blob: blob, partage: partage
+            });
+            majStatutRec("✅ Lecture enregistrée (" + e.jour + ", vitesse " + e.vitesse.toFixed(1) + "×). Tu peux la réécouter ci-dessous.", "#2e7d32");
+            afficherLectures();
+        } catch (err) {
+            console.error(err);
+            majStatutRec("⚠️ Impossible de sauvegarder l'enregistrement.", "#c62828");
+        }
+    };
+    if (e.mr.state !== "inactive") e.mr.stop(); else e.mr.onstop();
+}
+
+// Conversion en WAV mono 16 kHz (lisible partout, y compris WhatsApp)
+function encoderWav(samples, sr) {
+    var buffer = new ArrayBuffer(44 + samples.length * 2);
+    var v = new DataView(buffer);
+    function ecrire(off, str) { for (var i = 0; i < str.length; i++) v.setUint8(off + i, str.charCodeAt(i)); }
+    ecrire(0, "RIFF"); v.setUint32(4, 36 + samples.length * 2, true);
+    ecrire(8, "WAVE"); ecrire(12, "fmt "); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    ecrire(36, "data"); v.setUint32(40, samples.length * 2, true);
+    for (var i = 0; i < samples.length; i++) {
+        var x = Math.max(-1, Math.min(1, samples[i]));
+        v.setInt16(44 + i * 2, x < 0 ? x * 0x8000 : x * 0x7FFF, true);
+    }
+    return new Blob([buffer], { type: "audio/wav" });
+}
+
+async function versWav(blob) {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    var ctx = new AC();
+    var audio = await ctx.decodeAudioData(await blob.arrayBuffer());
+    ctx.close();
+    var sr = 16000;
+    var off = new OfflineAudioContext(1, Math.ceil(audio.duration * sr), sr);
+    var src = off.createBufferSource();
+    src.buffer = audio;
+    src.connect(off.destination);
+    src.start();
+    var rendu = await off.startRendering();
+    return encoderWav(rendu.getChannelData(0), sr);
+}
+
+// Réécoute avec surlignage synchronisé
+function arreterEcoute() {
+    if (!ecoute) return;
+    cancelAnimationFrame(ecoute.raf);
+    ecoute.audio.pause();
+    URL.revokeObjectURL(ecoute.url);
+    ecoute = null;
+    document.querySelectorAll(".word").forEach(function(s) { s.classList.remove("highlight"); });
+    afficherLectures();
+}
+
+async function ecouterLecture(id) {
+    if (ecoute && ecoute.id === id) { arreterEcoute(); return; }
+    arreterEcoute();
+    stopReading();
+    var r = await dbLire(id);
+    if (!r) return;
+    prepareText(r.texte);
+    var spans = document.querySelectorAll(".word");
+    var url = URL.createObjectURL(r.blob);
+    var audio = new Audio(url);
+    var e = { id: id, audio: audio, url: url, raf: 0, i: -1 };
+    ecoute = e;
+    function tick() {
+        if (ecoute !== e) return;
+        var t = audio.currentTime * 1000;
+        var k = e.i;
+        while (k + 1 < r.times.length && r.times[k + 1] !== undefined && r.times[k + 1] <= t) k++;
+        if (k !== e.i) {
+            spans.forEach(function(s) { s.classList.remove("highlight"); });
+            if (k >= 0 && spans[k]) spans[k].classList.add("highlight");
+            e.i = k;
+        }
+        e.raf = requestAnimationFrame(tick);
+    }
+    audio.onended = function() { if (ecoute === e) arreterEcoute(); };
+    try {
+        await audio.play();
+    } catch (err) {
+        arreterEcoute();
+        alert("Impossible de lire cet enregistrement.");
+        return;
+    }
+    afficherLectures();
+    tick();
+}
+
+// Partage (WhatsApp, etc.) via le menu de partage du téléphone
+function telechargerFichier(file) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(file);
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+async function partagerLecture(id) {
+    var r = await dbLire(id);
+    if (!r) return;
+    var blob = r.partage || r.blob;
+    var ext = blob.type.indexOf("wav") >= 0 ? "wav" : blob.type.indexOf("mp4") >= 0 ? "m4a" : blob.type.indexOf("ogg") >= 0 ? "ogg" : "webm";
+    var d = new Date(r.date);
+    var horo = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") + "_" + String(d.getHours()).padStart(2, "0") + "h" + String(d.getMinutes()).padStart(2, "0");
+    var nom = "lecture_" + r.jour.toLowerCase() + "_vitesse-" + r.vitesse.toFixed(1) + "_" + horo + "." + ext;
+    var file = new File([blob], nom, { type: blob.type });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+            await navigator.share({ files: [file], title: "Ma lecture – " + r.jour });
+        } catch (err) {
+            if (err.name !== "AbortError") telechargerFichier(file);
+        }
+    } else {
+        telechargerFichier(file);
+    }
+}
+
+async function supprimerLecture(id) {
+    if (!confirm("Supprimer cet enregistrement ?")) return;
+    if (ecoute && ecoute.id === id) arreterEcoute();
+    await dbSupprimer(id);
+    afficherLectures();
+}
+
+function formatDuree(sec) {
+    var m = Math.floor(sec / 60), s = Math.round(sec % 60);
+    return m + ":" + String(s).padStart(2, "0");
+}
+
+async function afficherLectures() {
+    var zone = document.getElementById("lectures-liste");
+    var liste = [];
+    try { liste = await dbTous(); } catch (_) {
+        zone.textContent = "Enregistrements indisponibles sur ce navigateur.";
+        return;
+    }
+    liste.sort(function(a, b) { return b.id - a.id; });
+    zone.innerHTML = "";
+    if (!liste.length) {
+        zone.innerHTML = '<span style="color:#666; font-size:16px;">Aucun enregistrement pour l\'instant. Coupe le son, appuie sur « Lire » et lis à voix haute.</span>';
+        return;
+    }
+    liste.forEach(function(r) {
+        var ligne = document.createElement("div");
+        ligne.style.cssText = "display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #eee;";
+        var info = document.createElement("div");
+        info.style.cssText = "flex:1 1 180px; font-size:17px;";
+        var d = new Date(r.date).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+        info.innerHTML = "<strong></strong><br><span style='color:#666; font-size:15px;'></span>";
+        info.querySelector("strong").textContent = r.jour + " · vitesse " + r.vitesse.toFixed(1) + "×";
+        info.querySelector("span").textContent = d + " · " + formatDuree(r.duree);
+        var enCours = ecoute && ecoute.id === r.id;
+        var b1 = document.createElement("button");
+        b1.textContent = enCours ? "⏹ Arrêter" : "▶️ Réécouter";
+        b1.style.cssText = "background:#d6e8ff; border-color:#5599dd;";
+        b1.onclick = function() { ecouterLecture(r.id); };
+        var b2 = document.createElement("button");
+        b2.textContent = "📤 Partager";
+        b2.style.cssText = "background:#d6f0d6; border-color:#4caf50;";
+        b2.onclick = function() { partagerLecture(r.id); };
+        var b3 = document.createElement("button");
+        b3.textContent = "🗑️";
+        b3.title = "Supprimer";
+        b3.style.cssText = "background:#ffd6d6; border-color:#e07070;";
+        b3.onclick = function() { supprimerLecture(r.id); };
+        ligne.appendChild(info); ligne.appendChild(b1); ligne.appendChild(b2); ligne.appendChild(b3);
+        zone.appendChild(ligne);
+    });
+}
+
+// ── Textes distants (fichier textes.txt hébergé à côté de index.html) ──
+const CLE_DISTANT = "lecturedictee_distant";
+
+function parserTextes(brut) {
+    // Format : === Lundi === (puis le texte), === Mardi === ...
+    var res = {};
+    var parts = brut.split(/^===\s*([^=\n]+?)\s*===\s*$/m);
+    for (var i = 1; i < parts.length; i += 2) {
+        res[parts[i].trim().toLowerCase()] = (parts[i + 1] || "").trim();
+    }
+    return res;
+}
+
+async function synchroniserTextesDistants() {
+    try {
+        var rep = await fetch("textes.txt?t=" + Date.now(), { cache: "no-store" });
+        if (!rep.ok) return false;
+        var distants = parserTextes(await rep.text());
+        var dernierVu = JSON.parse(localStorage.getItem(CLE_DISTANT) || "{}");
+        var slots = chargerSlots();
+        var change = false;
+        JOURS.forEach(function(jour, i) {
+            var nouveau = distants[jour.toLowerCase()];
+            if (nouveau === undefined) return;
+            // On n'écrase que si le texte distant a changé depuis la dernière synchro
+            if (nouveau !== dernierVu[jour]) {
+                slots[i] = nouveau;
+                dernierVu[jour] = nouveau;
+                change = true;
+            }
+        });
+        if (change) {
+            sauvegarderSlots(slots);
+            localStorage.setItem(CLE_DISTANT, JSON.stringify(dernierVu));
+        }
+        return change;
+    } catch (e) {
+        return false; // hors ligne ou fichier absent : on garde ce qui est en mémoire
+    }
+}
+
+window.addEventListener("DOMContentLoaded", async function() {
+    afficherLectures();
+    afficherOnglets();
+    await synchroniserTextesDistants();
+    afficherOnglets();
+    var texteInitial = document.getElementById("source-input").value.trim();
+    if (texteInitial) prepareText(texteInitial);
+    verifierSauvegarde();
+});
+</script>
+</body>
+</html>
