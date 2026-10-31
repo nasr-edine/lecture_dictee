@@ -1,6 +1,6 @@
 === Samedi ===
 
-**Le jeu qui observait ses joueurs**
+Le jeu qui observait ses joueurs
 
 Depuis quelques semaines, Yanis joue à un jeu de stratégie dans lequel il faut construire une ville, gérer des ressources et résoudre des problèmes. Au début, il progresse rapidement. Puis, à chaque nouvelle partie, le jeu semble devenir plus difficile. Les ressources manquent au mauvais moment, les habitants réclament de nouvelles installations et certaines missions lui paraissent presque impossibles.
 
@@ -18,7 +18,7 @@ Finalement, le jeu lui apprend quelque chose d’inattendu : pour progresser, il
 
 === Dimanche ===
 
-**Pourquoi notre cerveau invente parfois des souvenirs**
+Pourquoi notre cerveau invente parfois des souvenirs
 
 En regardant de vieilles photographies avec sa tante, Nora reconnaît immédiatement une image prise pendant des vacances lorsqu’elle était petite. Elle se souvient d’une plage immense, d’un château de sable et d’un goûter partagé sous un parasol. Elle est même certaine d’avoir porté un chapeau rouge ce jour-là.
 
