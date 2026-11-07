@@ -1,37 +1,34 @@
 === Samedi ===
 
-Le jeu qui observait ses joueurs
+Les coulisses d'un jeu vidéo
 
-Depuis quelques semaines, Yanis joue à un jeu de stratégie dans lequel il faut construire une ville, gérer des ressources et résoudre des problèmes. Au début, il progresse rapidement. Puis, à chaque nouvelle partie, le jeu semble devenir plus difficile. Les ressources manquent au mauvais moment, les habitants réclament de nouvelles installations et certaines missions lui paraissent presque impossibles.
+Lorsque son jeu vidéo préféré reçoit une nouvelle mise à jour, Inès remarque immédiatement plusieurs changements. Un personnage peut désormais sauter plus haut, certains décors ont été entièrement modifiés et une nouvelle mission apparaît sur la carte. Elle se demande comment les développeurs parviennent à transformer un jeu sans devoir tout recommencer depuis le début.
 
-Yanis pense d’abord qu’il a simplement atteint un niveau compliqué. Pourtant, il remarque un détail étrange : les difficultés apparaissent souvent après qu’il a répété la même stratégie plusieurs fois. Lorsqu’il construit toujours les mêmes bâtiments, le jeu lui impose des objectifs qui l’obligent à changer ses habitudes.
+En faisant quelques recherches, elle découvre qu'un jeu vidéo est le résultat du travail de nombreuses personnes. Les programmeurs écrivent le code qui permet aux personnages de se déplacer et aux objets de réagir. Les graphistes créent les décors, les animations et les apparences des personnages. Les concepteurs imaginent les missions, les règles et les différents niveaux. D'autres professionnels testent le jeu pour repérer les erreurs avant sa sortie.
 
-Intrigué, il consulte les paramètres et découvre que le jeu utilise un système d’adaptation. Ce type de mécanisme peut modifier certains éléments en fonction des actions du joueur. Le jeu ne comprend pas forcément ses intentions comme le ferait une personne, mais il peut repérer des régularités dans ses décisions.
+Inès apprend également qu'une mise à jour peut prendre plusieurs semaines de préparation. Une modification apparemment simple peut provoquer des problèmes inattendus. Par exemple, si un personnage se déplace plus rapidement, certains obstacles risquent de devenir trop faciles à franchir. Les développeurs doivent alors vérifier que le niveau reste intéressant et équilibré.
 
-Yanis décide alors de tester plusieurs stratégies. Pendant une partie, il investit toutes ses ressources dans la production. Pendant la suivante, il privilégie les échanges avec les villes voisines. Il observe les résultats et note les différences. Peu à peu, il comprend quelles décisions sont efficaces selon les situations.
+Elle découvre aussi le métier de testeur. Contrairement à ce qu'elle imaginait, son travail ne consiste pas seulement à jouer pour se divertir. Il faut reproduire les mêmes actions plusieurs fois, noter précisément les problèmes et expliquer dans quelles conditions ils apparaissent. Une erreur difficile à repérer peut parfois se produire uniquement après une succession particulière de mouvements.
 
-Cette expérience lui fait penser à un autre domaine : l’intelligence artificielle. Certains systèmes informatiques utilisent les données disponibles pour repérer des tendances et adapter leurs résultats. Ils peuvent être très performants, mais leurs décisions dépendent de leur conception, des informations utilisées et des objectifs qu’on leur a fixés.
+Inès décide de créer une petite fiche pour imaginer sa propre mise à jour. Elle décrit un nouveau niveau, dessine son environnement et explique les règles de fonctionnement. Elle ajoute même une liste de problèmes possibles que les testeurs devraient vérifier.
 
-Yanis reprend sa partie avec une nouvelle méthode. Il ne cherche plus seulement à gagner rapidement. Il essaie de comprendre les règles, de formuler des hypothèses et de vérifier ce qui fonctionne réellement.
-
-Finalement, le jeu lui apprend quelque chose d’inattendu : pour progresser, il ne suffit pas de répéter une méthode qui a déjà marché. Il faut aussi savoir observer, expérimenter et modifier sa stratégie lorsque les résultats ne correspondent pas à ses attentes.
+En terminant son travail, elle comprend qu'un jeu vidéo ne repose pas uniquement sur une bonne idée. Il demande de la créativité, de la logique, de la patience et une véritable collaboration entre différents métiers. Ce qui semblait être un simple divertissement lui apparaît désormais comme un projet technique et artistique beaucoup plus complexe.
 
 === Dimanche ===
 
-Pourquoi notre cerveau invente parfois des souvenirs
+L'expérience qui a changé les habitudes
 
-En regardant de vieilles photographies avec sa tante, Nora reconnaît immédiatement une image prise pendant des vacances lorsqu’elle était petite. Elle se souvient d’une plage immense, d’un château de sable et d’un goûter partagé sous un parasol. Elle est même certaine d’avoir porté un chapeau rouge ce jour-là.
+Pendant plusieurs semaines, Thomas a eu l'impression de manquer de temps. Après les cours, il commençait ses devoirs, consultait régulièrement son téléphone, puis reprenait son travail sans toujours savoir où il en était. Le soir, il avait souvent terminé ses exercices, mais il lui restait une sensation désagréable : celle d'avoir travaillé longtemps sans être vraiment efficace.
 
-Sa tante sourit en regardant la photographie. Sur l’image, Nora porte en réalité un chapeau jaune. Elle lui apprend également que le château de sable avait été construit la veille, et non le jour du goûter. Nora reste perplexe. Comment peut-elle être aussi convaincue d’un souvenir qui semble contenir des erreurs ?
+Un dimanche, il décide de comprendre ce qui lui fait perdre autant de temps. Il observe ses habitudes pendant une journée et remarque qu'il consulte son téléphone dès qu'un exercice devient difficile. Chaque interruption ne dure que quelques minutes, mais il lui faut ensuite un moment pour retrouver sa concentration.
 
-Sa tante lui explique que la mémoire ne fonctionne pas comme une caméra qui enregistrerait chaque détail avec une précision parfaite. Lorsque nous nous rappelons un événement, notre cerveau rassemble différentes informations : des images, des sensations, des émotions et parfois des éléments appris plus tard. Avec le temps, certains détails peuvent disparaître ou se mélanger.
+Thomas découvre que le cerveau a besoin d'un certain temps pour se replonger dans une activité. Lorsqu'une personne passe constamment d'une tâche à une autre, elle doit régulièrement retrouver les informations utiles et se rappeler ce qu'elle était en train de faire. Cette succession d'interruptions peut rendre le travail plus fatigant.
 
-Cela ne signifie pas que tous nos souvenirs sont faux. Beaucoup conservent des informations importantes sur notre passé. Cependant, un souvenir très vivant n’est pas nécessairement un souvenir entièrement exact. Le sentiment de certitude et la précision réelle sont deux choses différentes.
+Il décide alors de réaliser une expérience pendant une semaine. Avant de commencer ses devoirs, il prépare son bureau, choisit une seule tâche et éloigne son téléphone. Il travaille pendant vingt-cinq minutes, puis prend une courte pause. Si un exercice lui semble trop difficile, il note la question au lieu d'abandonner immédiatement.
 
-Nora repense alors à une dispute avec une amie. Pendant longtemps, elle a été persuadée que son amie avait commencé la conversation sur un ton agressif. Pourtant, elle ne se rappelle plus exactement les premiers mots échangés. Peut-être que sa déception a influencé la manière dont elle se représente cette scène.
+Les premiers jours ne sont pas faciles. Thomas a plusieurs fois envie de vérifier ses messages. Cependant, il remarque progressivement qu'il termine certaines activités plus rapidement. Il comprend aussi mieux ses erreurs, car il prend davantage le temps de réfléchir avant de répondre.
 
-Elle comprend qu’il est utile de distinguer ce dont elle se souvient clairement de ce qu’elle suppose ou reconstitue. Lorsqu’un événement est important, elle peut consulter des messages, des photographies ou demander à une autre personne ce qu’elle a observé. Ces éléments ne donnent pas toujours une réponse définitive, mais ils permettent parfois de vérifier certains détails.
+À la fin de la semaine, il compare ses résultats avec ceux de la semaine précédente. Il n'a pas travaillé moins longtemps chaque jour, mais il a mieux organisé son temps. Il lui reste même quelques minutes pour pratiquer la guitare avant le dîner.
 
-Le soir, Nora regarde de nouveau les photographies des vacances. Elle ne ressent pas le besoin de corriger chaque image de sa mémoire. Ce qui compte pour elle, c’est le plaisir d’avoir passé du temps avec sa famille, même si certains détails lui échappent.
+Thomas ne pense pas avoir trouvé une méthode parfaite. Il sait que certaines journées seront plus chargées et que sa concentration ne sera pas toujours la même. En revanche, il a découvert une chose importante : travailler efficacement ne signifie pas aller toujours plus vite. Cela consiste surtout à choisir ses priorités, limiter les distractions et avancer étape par étape.
 
-Elle découvre ainsi une idée essentielle : se souvenir, ce n’est pas simplement retrouver le passé. C’est aussi reconstruire une histoire à partir des traces que le temps a laissées.
